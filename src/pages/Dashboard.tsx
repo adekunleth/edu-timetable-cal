@@ -1,8 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, BookOpen, AlertCircle } from "lucide-react";
+import { Calendar, Users, BookOpen, AlertCircle, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { AttendanceMarkingDialog } from "@/components/AttendanceMarkingDialog";
 
 export default function Dashboard() {
+  const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+
+  const handleMarkAttendance = (cls: any) => {
+    setSelectedClass({
+      subject: cls.subject.split(" - ")[0],
+      title: cls.subject.split(" - ")[1],
+      date: "March 10, 2025",
+      time: cls.time,
+      room: cls.room,
+    });
+    setAttendanceDialogOpen(true);
+  };
+
   const stats = [
     {
       title: "Active Subjects",
@@ -118,8 +134,8 @@ export default function Dashboard() {
                 key={index}
                 className={`rounded-lg border p-4 ${cls.color}`}
               >
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 space-y-1">
                     <h4 className="font-semibold">{cls.subject}</h4>
                     <p className="text-sm opacity-90">{cls.time}</p>
                     <p className="text-sm opacity-75">{cls.room}</p>
@@ -127,9 +143,19 @@ export default function Dashboard() {
                       Instructor: {cls.instructor}
                     </p>
                   </div>
-                  <span className="rounded-full px-3 py-1 text-xs font-medium">
-                    {cls.type}
-                  </span>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="rounded-full px-3 py-1 text-xs font-medium">
+                      {cls.type}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleMarkAttendance(cls)}
+                    >
+                      <ClipboardCheck className="h-4 w-4 mr-2" />
+                      Mark Attendance
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -159,6 +185,14 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {selectedClass && (
+        <AttendanceMarkingDialog
+          open={attendanceDialogOpen}
+          onOpenChange={setAttendanceDialogOpen}
+          classInfo={selectedClass}
+        />
+      )}
     </div>
   );
 }

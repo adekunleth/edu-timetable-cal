@@ -1,10 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, ClipboardCheck } from "lucide-react";
 import { useState } from "react";
+import { AttendanceMarkingDialog } from "@/components/AttendanceMarkingDialog";
 
 export default function CalendarView() {
   const [currentDate] = useState(new Date(2025, 2, 10)); // March 10, 2025
+  const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<any>(null);
+
+  const handleMarkAttendance = (cls: any) => {
+    setSelectedClass({
+      subject: cls.subject,
+      title: cls.title,
+      date: "March 10, 2025",
+      time: "9:00 AM - 11:00 AM",
+      room: cls.room,
+    });
+    setAttendanceDialogOpen(true);
+  };
 
   const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
   const timeSlots = [
@@ -174,7 +188,7 @@ export default function CalendarView() {
                           .map((cls, idx) => (
                             <div
                               key={idx}
-                              className={`absolute inset-x-2 rounded-lg border-l-4 p-2 ${cls.color}`}
+                              className={`absolute inset-x-2 rounded-lg border-l-4 p-2 ${cls.color} group cursor-pointer hover:shadow-md transition-shadow`}
                               style={{
                                 height: `${cls.duration * 80 - 8}px`,
                               }}
@@ -188,6 +202,15 @@ export default function CalendarView() {
                               <div className="mt-1 text-xs opacity-75">
                                 {cls.room}
                               </div>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="absolute bottom-2 right-2 h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleMarkAttendance(cls)}
+                              >
+                                <ClipboardCheck className="h-3 w-3 mr-1" />
+                                Mark
+                              </Button>
                             </div>
                           ))}
                       </div>
@@ -199,6 +222,14 @@ export default function CalendarView() {
           </div>
         </CardContent>
       </Card>
+
+      {selectedClass && (
+        <AttendanceMarkingDialog
+          open={attendanceDialogOpen}
+          onOpenChange={setAttendanceDialogOpen}
+          classInfo={selectedClass}
+        />
+      )}
     </div>
   );
 }
