@@ -1,11 +1,18 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Plus, ClipboardCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, ClipboardCheck, CalendarDays, List } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AttendanceMarkingDialog } from "@/components/AttendanceMarkingDialog";
+import { useClasses } from "@/contexts/ClassesContext";
+import { ClassListTable } from "@/components/ClassListTable";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function CalendarView() {
+  const navigate = useNavigate();
+  const { classes } = useClasses();
   const [currentDate] = useState(new Date(2025, 2, 10)); // March 10, 2025
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<any>(null);
 
@@ -34,69 +41,29 @@ export default function CalendarView() {
     "5:00 PM",
   ];
 
-  // Sample schedule data
-  const schedule = [
-    {
-      day: 0,
-      startTime: 1,
-      duration: 2,
-      subject: "BIO101",
-      title: "Anatomy Basics",
-      type: "Lecture",
-      room: "A201",
-      color: "bg-lecture/10 border-lecture text-lecture",
-    },
-    {
-      day: 0,
-      startTime: 4,
-      duration: 2,
-      subject: "CHEM202",
-      title: "Organic Chemistry",
-      type: "Lab",
-      room: "Lab 3",
-      color: "bg-lab/10 border-lab text-lab",
-    },
-    {
-      day: 1,
-      startTime: 2,
-      duration: 1,
-      subject: "MATH301",
-      title: "Advanced Calculus",
-      type: "Tutorial",
-      room: "C105",
-      color: "bg-tutorial/10 border-tutorial text-tutorial",
-    },
-    {
-      day: 2,
-      startTime: 1,
-      duration: 2,
-      subject: "PHYS202",
-      title: "Quantum Physics",
-      type: "Lecture",
-      room: "B302",
-      color: "bg-lecture/10 border-lecture text-lecture",
-    },
-    {
-      day: 3,
-      startTime: 3,
-      duration: 2,
-      subject: "CS401",
-      title: "AI Workshop",
-      type: "Workshop",
-      room: "D501",
-      color: "bg-workshop/10 border-workshop text-workshop",
-    },
-    {
-      day: 4,
-      startTime: 1,
-      duration: 1,
-      subject: "ENG101",
-      title: "Academic Writing",
-      type: "Online",
-      room: "Zoom",
-      color: "bg-online/10 border-online text-online",
-    },
-  ];
+  // Convert classes to schedule format for calendar view
+  const schedule = classes.flatMap((cls) =>
+    cls.sessions.map((session) => {
+      // Convert time to slot index
+      const startHour = parseInt(session.startTime.split(":")[0]);
+      const startTimeIndex = startHour - 8; // 8:00 AM is index 0
+      
+      const endHour = parseInt(session.endTime.split(":")[0]);
+      const duration = endHour - startHour;
+
+      return {
+        day: session.day,
+        startTime: startTimeIndex,
+        duration,
+        subject: cls.subject,
+        title: cls.title,
+        type: session.deliveryType,
+        room: session.deliveryMethod === "Online" ? "Online" : session.room || "",
+        color: cls.color,
+        classId: cls.id,
+      };
+    })
+  );
 
   return (
     <div className="space-y-6">
@@ -108,38 +75,56 @@ export default function CalendarView() {
           <p className="text-muted-foreground">Week View - March 10-14, 2025</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline">Today</Button>
-          <Button variant="outline" size="icon">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button className="ml-4">
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "calendar" | "list")}>
+            <TabsList>
+              <TabsTrigger value="calendar" className="gap-2">
+                <CalendarDays className="h-4 w-4" />
+                Calendar
+              </TabsTrigger>
+              <TabsTrigger value="list" className="gap-2">
+                <List className="h-4 w-4" />
+                List
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          {viewMode === "calendar" && (
+            <>
+              <Button variant="outline" size="icon">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline">Today</Button>
+              <Button variant="outline" size="icon">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+          <Button className="ml-4" onClick={() => navigate("/calendar/add-class")}>
             <Plus className="mr-2 h-4 w-4" />
             Add Class
           </Button>
         </div>
       </div>
 
-      {/* Legend */}
-      <div className="flex flex-wrap gap-4">
-        {[
-          { type: "Lecture", color: "bg-lecture" },
-          { type: "Lab", color: "bg-lab" },
-          { type: "Tutorial", color: "bg-tutorial" },
-          { type: "Workshop", color: "bg-workshop" },
-          { type: "Online", color: "bg-online" },
-        ].map((item) => (
-          <div key={item.type} className="flex items-center gap-2">
-            <div className={`h-3 w-3 rounded ${item.color}`} />
-            <span className="text-sm text-muted-foreground">{item.type}</span>
+      {viewMode === "calendar" && (
+        <>
+          {/* Legend */}
+          <div className="flex flex-wrap gap-4">
+            {[
+              { type: "Lecture", color: "bg-lecture" },
+              { type: "Lab", color: "bg-lab" },
+              { type: "Tutorial", color: "bg-tutorial" },
+              { type: "Workshop", color: "bg-workshop" },
+              { type: "Online", color: "bg-online" },
+            ].map((item) => (
+              <div key={item.type} className="flex items-center gap-2">
+                <div className={`h-3 w-3 rounded ${item.color}`} />
+                <span className="text-sm text-muted-foreground">{item.type}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Calendar Grid */}
-      <Card>
+          {/* Calendar Grid */}
+          <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <div className="min-w-[800px]">
@@ -222,6 +207,10 @@ export default function CalendarView() {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
+
+      {viewMode === "list" && <ClassListTable />}
 
       {selectedClass && (
         <AttendanceMarkingDialog
