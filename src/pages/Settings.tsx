@@ -2,8 +2,24 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useState } from "react";
 
 export default function Settings() {
+  const [schedulingDays, setSchedulingDays] = useState({
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: false,
+    sunday: false,
+  });
+
+  const toggleDay = (day: keyof typeof schedulingDays) => {
+    setSchedulingDays(prev => ({ ...prev, [day]: !prev[day] }));
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -52,6 +68,31 @@ export default function Settings() {
             <CardTitle>Scheduling Framework</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Available Days</Label>
+              <div className="flex flex-wrap gap-4 p-4 bg-muted/30 rounded-lg">
+                {[
+                  { key: 'monday', label: 'Monday' },
+                  { key: 'tuesday', label: 'Tuesday' },
+                  { key: 'wednesday', label: 'Wednesday' },
+                  { key: 'thursday', label: 'Thursday' },
+                  { key: 'friday', label: 'Friday' },
+                  { key: 'saturday', label: 'Saturday' },
+                  { key: 'sunday', label: 'Sunday' },
+                ].map(({ key, label }) => (
+                  <div key={key} className="flex items-center gap-2">
+                    <Checkbox
+                      id={key}
+                      checked={schedulingDays[key as keyof typeof schedulingDays]}
+                      onCheckedChange={() => toggleDay(key as keyof typeof schedulingDays)}
+                    />
+                    <Label htmlFor={key} className="cursor-pointer font-normal">
+                      {label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Start Time</Label>

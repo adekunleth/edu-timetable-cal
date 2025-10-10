@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,14 +13,12 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useClasses } from "@/contexts/ClassesContext";
 import { ClassSchedule, ClassSession, DeliveryType, DeliveryMethod } from "@/types/classForm";
-import { ChevronLeft, Save, Upload, Plus, Trash2, CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { ChevronLeft, Save, Upload, Plus, Trash2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SUBJECTS, INSTRUCTORS, CAMPUSES, BUILDINGS_ROOMS, STUDY_PERIODS, COHORTS } from "@/constants/dropdownOptions";
+import { generateWeeksForPeriod, calculateNumberOfWeeks } from "@/utils/weekGenerator";
 
 const typeColorMap: Record<DeliveryType, string> = {
   Lecture: "bg-lecture/10 border-lecture text-lecture",
@@ -33,22 +31,18 @@ const typeColorMap: Record<DeliveryType, string> = {
 
 export default function ClassCreationForm() {
   const navigate = useNavigate();
-  const { addClass } = useClasses();
+  const { classes, addClass } = useClasses();
   const { toast } = useToast();
 
   // Academic Context
-  const [academicYear, setAcademicYear] = useState("2025");
-  const [studyPeriod, setStudyPeriod] = useState("Semester 1 (Feb–Jun)");
-  const [term, setTerm] = useState("");
-  const [subject, setSubject] = useState("");
-  const [subjectTitle, setSubjectTitle] = useState("");
-  const [course, setCourse] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [studyPeriod, setStudyPeriod] = useState("");
   const [cohort, setCohort] = useState("");
 
   // Schedule
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
-  const [customNotes, setCustomNotes] = useState("");
+  const [startWeek, setStartWeek] = useState<number>();
+  const [endWeek, setEndWeek] = useState<number>();
+  const [contactHours, setContactHours] = useState<number>(2);
 
   // Sessions
   const [sessions, setSessions] = useState<ClassSession[]>([
@@ -69,6 +63,41 @@ export default function ClassCreationForm() {
   // Additional Info
   const [description, setDescription] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
+
+  // Generate weeks based on selected study period
+  const availableWeeks = useMemo(() => {
+    const period = STUDY_PERIODS.find(p => p.id === studyPeriod);
+    if (!period) return [];
+    return generateWeeksForPeriod(period.startDate, period.endDate);
+  }, [studyPeriod]);
+
+  // Calculate number of weeks and total contact hours
+  const numberOfWeeks = useMemo(() => {
+    if (startWeek && endWeek) {
+      return calculateNumberOfWeeks(startWeek, endWeek);
+    }
+    return 0;
+  }, [startWeek, endWeek]);
+
+  const totalContactHours = useMemo(() => {
+    return contactHours * numberOfWeeks;
+  }, [contactHours, numberOfWeeks]);
+
+  // Room conflict detection
+  const detectRoomConflict = (sessionToCheck: ClassSession) => {
+    return classes.some(cls => 
+      cls.sessions.some(session => 
+        session.day === sessionToCheck.day &&
+        session.building === sessionToCheck.building &&
+        session.room === sessionToCheck.room &&
+        timeRangesOverlap(session.startTime, session.endTime, sessionToCheck.startTime, sessionToCheck.endTime)
+      )
+    );
+  };
+
+  const timeRangesOverlap = (start1: string, end1: string, start2: string, end2: string) => {
+    return start1 < end2 && end1 > start2;
+  };
 
   const addSession = () => {
     const newSession: ClassSession = {
@@ -96,27 +125,39 @@ export default function ClassCreationForm() {
     );
   };
 
-  const calculateWeeks = () => {
-    if (!startDate || !endDate) return 0;
-    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.ceil(diffDays / 7);
-  };
-
-  const calculateContactHours = () => {
-    return sessions.reduce((total, session) => {
-      const start = parseFloat(session.startTime.split(":")[0]) + parseFloat(session.startTime.split(":")[1]) / 60;
-      const end = parseFloat(session.endTime.split(":")[0]) + parseFloat(session.endTime.split(":")[1]) / 60;
-      return total + (end - start);
-    }, 0);
-  };
-
   const handlePublish = () => {
-    // Basic validation
-    if (!subject || !subjectTitle || !startDate || !endDate) {
+    // Validation
+    if (!selectedSubject) {
       toast({
         title: "Validation Error",
-        description: "Please fill in all required fields.",
+        description: "Please select a subject",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!studyPeriod) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a study period",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!startWeek || !endWeek) {
+      toast({
+        title: "Validation Error",
+        description: "Please select start and end weeks",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (sessions.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please add at least one class session",
         variant: "destructive",
       });
       return;
@@ -131,25 +172,38 @@ export default function ClassCreationForm() {
       return;
     }
 
-    // Determine primary delivery type for color
-    const primaryType = sessions[0]?.deliveryType || "Lecture";
+    // Parse subject
+    const subjectData = SUBJECTS.find(s => s.label === selectedSubject);
+    if (!subjectData) {
+      toast({
+        title: "Validation Error",
+        description: "Invalid subject selection",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    // Get selected period dates
+    const period = STUDY_PERIODS.find(p => p.id === studyPeriod);
+    if (!period) return;
+
+    const startWeekData = availableWeeks.find(w => w.weekNumber === startWeek);
+    const endWeekData = availableWeeks.find(w => w.weekNumber === endWeek);
+
+    // Create class object
     const newClass: ClassSchedule = {
       id: `class-${Date.now()}`,
-      subject,
-      title: subjectTitle,
-      academicYear,
-      studyPeriod,
-      term: term || undefined,
-      course: course || undefined,
+      subject: subjectData.code,
+      title: subjectData.title,
+      academicYear: period.id.split('-')[0],
+      studyPeriod: period.label,
       cohort: cohort || undefined,
-      startDate: format(startDate, "yyyy-MM-dd"),
-      endDate: format(endDate, "yyyy-MM-dd"),
-      customNotes: customNotes || undefined,
+      startDate: startWeekData ? startWeekData.startDate.toISOString().split('T')[0] : '',
+      endDate: endWeekData ? endWeekData.startDate.toISOString().split('T')[0] : '',
       sessions,
       description: description || undefined,
       internalNotes: internalNotes || undefined,
-      color: typeColorMap[primaryType],
+      color: typeColorMap[sessions[0]?.deliveryType || "Lecture"],
     };
 
     addClass(newClass);
@@ -202,112 +256,61 @@ export default function ClassCreationForm() {
           <CardTitle>Academic Context</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="academicYear">
-                Academic Year <span className="text-destructive">*</span>
-              </Label>
-              <Select value={academicYear} onValueChange={setAcademicYear}>
-                <SelectTrigger id="academicYear">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2024">2024</SelectItem>
-                  <SelectItem value="2025">2025</SelectItem>
-                  <SelectItem value="2026">2026</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="studyPeriod">
-                Study Period / Semester <span className="text-destructive">*</span>
-              </Label>
-              <Select value={studyPeriod} onValueChange={setStudyPeriod}>
-                <SelectTrigger id="studyPeriod">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Semester 1 (Feb–Jun)">
-                    Semester 1 (Feb–Jun)
+          <div className="space-y-2">
+            <Label htmlFor="subject">
+              Subject <span className="text-destructive">*</span>
+            </Label>
+            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+              <SelectTrigger id="subject">
+                <SelectValue placeholder="Select a subject" />
+              </SelectTrigger>
+              <SelectContent>
+                {SUBJECTS.map((subject) => (
+                  <SelectItem key={subject.code} value={subject.label}>
+                    {subject.label}
                   </SelectItem>
-                  <SelectItem value="Semester 2 (Jul–Nov)">
-                    Semester 2 (Jul–Nov)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="term">Term / Block</Label>
-              <Select value={term} onValueChange={setTerm}>
-                <SelectTrigger id="term">
-                  <SelectValue placeholder="Select term (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Term 1 (Weeks 1–7)">
-                    Term 1 (Weeks 1–7)
-                  </SelectItem>
-                  <SelectItem value="Term 2 (Weeks 8–14)">
-                    Term 2 (Weeks 8–14)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="subject">
-                Subject Code <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="subject"
-                placeholder="e.g., BIO101"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="subjectTitle">
-                Subject Title <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="subjectTitle"
-                placeholder="e.g., Anatomy Basics"
-                value={subjectTitle}
-                onChange={(e) => setSubjectTitle(e.target.value)}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="studyPeriod">
+              Study Period / Semester <span className="text-destructive">*</span>
+            </Label>
+            <Select value={studyPeriod} onValueChange={(value) => {
+              setStudyPeriod(value);
+              setStartWeek(undefined);
+              setEndWeek(undefined);
+            }}>
+              <SelectTrigger id="studyPeriod">
+                <SelectValue placeholder="Select study period" />
+              </SelectTrigger>
+              <SelectContent>
+                {STUDY_PERIODS.map((period) => (
+                  <SelectItem key={period.id} value={period.id}>
+                    {period.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="course">Course / Program</Label>
-              <Select value={course} onValueChange={setCourse}>
-                <SelectTrigger id="course">
-                  <SelectValue placeholder="Select course (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Nursing">Bachelor of Nursing</SelectItem>
-                  <SelectItem value="Medicine">Bachelor of Medicine</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {course && (
-              <div className="space-y-2">
-                <Label htmlFor="cohort">
-                  Cohort / Intake <span className="text-destructive">*</span>
-                </Label>
-                <Select value={cohort} onValueChange={setCohort}>
-                  <SelectTrigger id="cohort">
-                    <SelectValue placeholder="Select cohort" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2025 S1">2025 S1</SelectItem>
-                    <SelectItem value="2025 S2">2025 S2</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+          <div className="space-y-2">
+            <Label htmlFor="cohort">Cohort / Intake (Optional)</Label>
+            <Select value={cohort} onValueChange={setCohort}>
+              <SelectTrigger id="cohort">
+                <SelectValue placeholder="Select cohort (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None</SelectItem>
+                {COHORTS.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -320,74 +323,92 @@ export default function ClassCreationForm() {
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-2">
-              <Label>
-                Start Date <span className="text-destructive">*</span>
+              <Label htmlFor="startWeek">
+                Start Week <span className="text-destructive">*</span>
               </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Select 
+                value={startWeek?.toString()} 
+                onValueChange={(value) => setStartWeek(parseInt(value))}
+                disabled={!studyPeriod}
+              >
+                <SelectTrigger id="startWeek">
+                  <SelectValue placeholder={studyPeriod ? "Select start week" : "Select study period first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableWeeks.map((week) => (
+                    <SelectItem key={week.weekNumber} value={week.weekNumber.toString()}>
+                      {week.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
             <div className="space-y-2">
-              <Label>
-                End Date <span className="text-destructive">*</span>
+              <Label htmlFor="endWeek">
+                End Week <span className="text-destructive">*</span>
               </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Select 
+                value={endWeek?.toString()} 
+                onValueChange={(value) => setEndWeek(parseInt(value))}
+                disabled={!startWeek}
+              >
+                <SelectTrigger id="endWeek">
+                  <SelectValue placeholder={startWeek ? "Select end week" : "Select start week first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableWeeks
+                    .filter(week => startWeek ? week.weekNumber >= startWeek : true)
+                    .map((week) => (
+                      <SelectItem key={week.weekNumber} value={week.weekNumber.toString()}>
+                        {week.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
             </div>
+
             <div className="space-y-2">
-              <Label>Number of Weeks</Label>
-              <Input value={`${calculateWeeks()} weeks`} readOnly className="bg-muted" />
+              <Label htmlFor="weeks">Number of Weeks</Label>
+              <Input 
+                id="weeks"
+                value={`${numberOfWeeks} weeks`} 
+                readOnly 
+                className="bg-muted" 
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label>Credit / Contact Hours</Label>
+              <Label htmlFor="contactHours">Credit / Contact Hours (per week)</Label>
               <Input
-                value={`${calculateContactHours().toFixed(1)} hours/week`}
+                id="contactHours"
+                type="number"
+                min="1"
+                step="0.5"
+                value={contactHours}
+                onChange={(e) => setContactHours(parseFloat(e.target.value) || 2)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="totalHours">Total Contact Hours</Label>
+              <Input
+                id="totalHours"
+                type="text"
+                value={`${totalContactHours} hours`}
                 readOnly
                 className="bg-muted"
               />
             </div>
+          </div>
+
+          <div className="rounded-lg bg-muted/50 p-3 text-sm">
+            <span className="text-muted-foreground">Duration: </span>
+            <span className="font-medium">{numberOfWeeks} weeks</span>
+            <span className="mx-2 text-muted-foreground">•</span>
+            <span className="text-muted-foreground">Total: </span>
+            <span className="font-medium">{totalContactHours} contact hours</span>
           </div>
 
           {/* Class Sessions */}
@@ -461,17 +482,27 @@ export default function ClassCreationForm() {
                         }
                       />
                     </div>
-                    <div className="space-y-2 md:col-span-2">
+                    <div className="space-y-2 md:col-span-3">
                       <Label>
                         Instructor <span className="text-destructive">*</span>
                       </Label>
-                      <Input
-                        placeholder="e.g., Dr. Sarah Nguyen"
+                      <Select
                         value={session.instructor}
-                        onChange={(e) =>
-                          updateSession(session.id, { instructor: e.target.value })
+                        onValueChange={(value) =>
+                          updateSession(session.id, { instructor: value })
                         }
-                      />
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select instructor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {INSTRUCTORS.map((instructor) => (
+                            <SelectItem key={instructor} value={instructor}>
+                              {instructor}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -479,13 +510,11 @@ export default function ClassCreationForm() {
                     <h4 className="mb-3 text-sm font-semibold">Delivery Details</h4>
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                       <div className="space-y-2">
-                        <Label>
-                          Delivery Type <span className="text-destructive">*</span>
-                        </Label>
+                        <Label>Delivery Type</Label>
                         <Select
                           value={session.deliveryType}
-                          onValueChange={(v) =>
-                            updateSession(session.id, { deliveryType: v as DeliveryType })
+                          onValueChange={(value: DeliveryType) =>
+                            updateSession(session.id, { deliveryType: value })
                           }
                         >
                           <SelectTrigger>
@@ -501,16 +530,12 @@ export default function ClassCreationForm() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <Label>
-                          Delivery Method <span className="text-destructive">*</span>
-                        </Label>
+                      <div className="space-y-2">
+                        <Label>Delivery Method</Label>
                         <Select
                           value={session.deliveryMethod}
-                          onValueChange={(v) =>
-                            updateSession(session.id, {
-                              deliveryMethod: v as DeliveryMethod,
-                            })
+                          onValueChange={(value: DeliveryMethod) =>
+                            updateSession(session.id, { deliveryMethod: value })
                           }
                         >
                           <SelectTrigger>
@@ -526,56 +551,71 @@ export default function ClassCreationForm() {
                     </div>
                   </div>
 
-                  {(session.deliveryMethod === "On-Campus" ||
-                    session.deliveryMethod === "Blended") && (
+                  {session.deliveryMethod === "On-Campus" && (
                     <div className="border-t pt-4">
-                      <h4 className="mb-3 text-sm font-semibold">Location</h4>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <h4 className="mb-3 text-sm font-semibold">Location Details</h4>
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <Label>Campus</Label>
-                          <Input
-                            placeholder="e.g., Main Campus"
+                          <Select
                             value={session.campus || ""}
-                            onChange={(e) =>
-                              updateSession(session.id, { campus: e.target.value })
+                            onValueChange={(value) =>
+                              updateSession(session.id, { campus: value })
                             }
-                          />
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select campus" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {CAMPUSES.map((campus) => (
+                                <SelectItem key={campus} value={campus}>
+                                  {campus}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                         <div className="space-y-2">
                           <Label>Building / Room</Label>
-                          <Input
-                            placeholder="e.g., Building A - Room 201"
-                            value={session.room || ""}
-                            onChange={(e) =>
-                              updateSession(session.id, { room: e.target.value })
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Room Capacity</Label>
-                          <Input
-                            type="number"
-                            placeholder="120"
-                            value={session.roomCapacity || ""}
-                            onChange={(e) =>
-                              updateSession(session.id, {
-                                roomCapacity: parseInt(e.target.value),
-                              })
-                            }
-                          />
+                          <Select
+                            value={session.building && session.room ? `Building ${session.building} - Room ${session.room}` : ""}
+                            onValueChange={(value) => {
+                              const [building, room] = value.split(' - Room ');
+                              updateSession(session.id, { 
+                                building: building.replace('Building ', ''),
+                                room: room 
+                              });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select building and room" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {BUILDINGS_ROOMS.map((br) => (
+                                <SelectItem key={br} value={br}>
+                                  {br}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {session.building && session.room && detectRoomConflict(session) && (
+                            <div className="flex items-center gap-2 text-sm text-amber-600">
+                              <AlertCircle className="h-4 w-4" />
+                              <span>⚠️ Room conflict: This room is already booked for this time</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {(session.deliveryMethod === "Online" ||
-                    session.deliveryMethod === "Blended") && (
+                  {(session.deliveryMethod === "Online" || session.deliveryMethod === "Blended") && (
                     <div className="border-t pt-4">
                       <h4 className="mb-3 text-sm font-semibold">Online Details</h4>
                       <div className="space-y-2">
                         <Label>Online Link</Label>
                         <Input
-                          placeholder="Zoom link or meeting URL"
+                          placeholder="e.g., https://zoom.us/j/123456789"
                           value={session.onlineLink || ""}
                           onChange={(e) =>
                             updateSession(session.id, { onlineLink: e.target.value })
@@ -586,27 +626,30 @@ export default function ClassCreationForm() {
                   )}
 
                   <div className="border-t pt-4">
-                    <h4 className="mb-3 text-sm font-semibold">Attendance Settings</h4>
+                    <h4 className="mb-3 text-sm font-semibold">Attendance Tracking</h4>
                     <div className="space-y-4">
                       <div className="flex items-center space-x-2">
                         <Checkbox
-                          id={`track-${session.id}`}
+                          id={`attendance-${session.id}`}
                           checked={session.trackAttendance}
                           onCheckedChange={(checked) =>
                             updateSession(session.id, {
-                              trackAttendance: !!checked,
+                              trackAttendance: checked as boolean,
                             })
                           }
                         />
-                        <Label htmlFor={`track-${session.id}`}>
-                          Track attendance
+                        <Label
+                          htmlFor={`attendance-${session.id}`}
+                          className="font-normal"
+                        >
+                          Enable attendance tracking for this session
                         </Label>
                       </div>
 
                       {session.trackAttendance && (
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div className="space-y-2">
-                            <Label>Minimum Attendance %</Label>
+                            <Label>Minimum Attendance (%)</Label>
                             <Input
                               type="number"
                               min="0"
@@ -623,9 +666,9 @@ export default function ClassCreationForm() {
                             <Label>Attendance Method</Label>
                             <Select
                               value={session.attendanceMethod || "Instructor Marked"}
-                              onValueChange={(v) =>
+                              onValueChange={(value) =>
                                 updateSession(session.id, {
-                                  attendanceMethod: v as any,
+                                  attendanceMethod: value as any,
                                 })
                               }
                             >
@@ -646,20 +689,6 @@ export default function ClassCreationForm() {
                               </SelectContent>
                             </Select>
                           </div>
-                          <div className="flex items-end space-x-2">
-                            <Checkbox
-                              id={`reminder-${session.id}`}
-                              checked={session.sendReminder}
-                              onCheckedChange={(checked) =>
-                                updateSession(session.id, {
-                                  sendReminder: !!checked,
-                                })
-                              }
-                            />
-                            <Label htmlFor={`reminder-${session.id}`}>
-                              Send reminder
-                            </Label>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -667,18 +696,6 @@ export default function ClassCreationForm() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Custom Notes</Label>
-              <Textarea
-                placeholder="Any special instructions or notes about the schedule..."
-                value={customNotes}
-                onChange={(e) => setCustomNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -688,24 +705,26 @@ export default function ClassCreationForm() {
         <CardHeader>
           <CardTitle>Additional Information</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label>Description / Summary</Label>
+            <Label htmlFor="description">Description</Label>
             <Textarea
-              placeholder="Course description or summary..."
+              id="description"
+              placeholder="Brief description of the class..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
             />
           </div>
+
           <div className="space-y-2">
-            <Label>Internal Notes (Admins only)</Label>
+            <Label htmlFor="internalNotes">Internal Notes (Optional)</Label>
             <Textarea
-              placeholder="Internal administrative notes..."
+              id="internalNotes"
+              placeholder="Add internal notes or reminders..."
               value={internalNotes}
               onChange={(e) => setInternalNotes(e.target.value)}
-              rows={2}
-              className="bg-late/5"
+              rows={3}
             />
           </div>
         </CardContent>

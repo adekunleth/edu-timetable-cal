@@ -128,10 +128,10 @@ export function ClassListTable() {
       <div className="rounded-md border border-border bg-card">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Subject</TableHead>
-              <TableHead>Title</TableHead>
-              <TableHead>Type</TableHead>
+          <TableRow>
+            <TableHead>Subject</TableHead>
+            <TableHead>Cohort/Intake</TableHead>
+            <TableHead>Type</TableHead>
               <TableHead>Schedule</TableHead>
               <TableHead>Instructor</TableHead>
               <TableHead>Location</TableHead>
