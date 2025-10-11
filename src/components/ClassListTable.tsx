@@ -132,12 +132,12 @@ export function ClassListTable() {
             <TableHead>Subject</TableHead>
             <TableHead>Cohort/Intake</TableHead>
             <TableHead>Type</TableHead>
-              <TableHead>Schedule</TableHead>
-              <TableHead>Instructor</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Attendance</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
+            <TableHead>Schedule</TableHead>
+            <TableHead>Instructor</TableHead>
+            <TableHead>Location</TableHead>
+            <TableHead>Attendance</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
           </TableHeader>
           <TableBody>
             {filteredClasses.length === 0 ? (
@@ -151,8 +151,16 @@ export function ClassListTable() {
                 const session = cls.sessions[0]; // For now, show first session
                 return (
                   <TableRow key={cls.id}>
-                    <TableCell className="font-medium">{cls.subject}</TableCell>
-                    <TableCell>{cls.title}</TableCell>
+                    <TableCell className="font-medium">
+                      {cls.subject} - {cls.title}
+                    </TableCell>
+                    <TableCell>
+                      {cls.cohort ? (
+                        cls.cohort
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"

@@ -303,7 +303,6 @@ export default function ClassCreationForm() {
                 <SelectValue placeholder="Select cohort (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
                 {COHORTS.map((c) => (
                   <SelectItem key={c} value={c}>
                     {c}
