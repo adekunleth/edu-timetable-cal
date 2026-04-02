@@ -1,73 +1,50 @@
-# Welcome to your Lovable project
 
-## Project info
 
-**URL**: https://lovable.dev/projects/d4889981-6e28-4b24-8f4e-25dc6e594c73
+## README Content
 
-## How can I edit this code?
+Replace the current `README.md` with the following:
 
-There are several ways of editing your application.
+```markdown
+# ClassLens — Academic timetabling and attendance management prototype
 
-**Use Lovable**
+**Live demo →** [id-preview--d4889981-6e28-4b24-8f4e-25dc6e594c73.lovable.app](https://id-preview--d4889981-6e28-4b24-8f4e-25dc6e594c73.lovable.app)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/d4889981-6e28-4b24-8f4e-25dc6e594c73) and start prompting.
+A prototype built to explore whether a single, unified interface can handle the full complexity of academic class scheduling — from multi-session creation with conditional delivery modes to real-time conflict detection and attendance tracking.
 
-Changes made via Lovable will be committed automatically to this repo.
+## What it is
 
-**Use your preferred IDE**
+ClassLens is a timetabling tool for higher education administrators who need to create, schedule, and monitor classes across multiple campuses, delivery formats (on-campus, online, blended), and student cohorts. It was built to validate whether a form-driven workflow with smart defaults, automatic calculations, and inline conflict warnings could replace the spreadsheet-heavy processes many institutions still rely on. The target users are academic administrators, course coordinators, and timetabling officers.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Screenshots
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+*(Add screenshots of the Dashboard, Calendar/List view, and Class Creation Form here)*
 
-Follow these steps:
+## Core features
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+- **Class creation form** — A multi-section form with conditional logic (delivery method toggles location vs. online fields), automatic calculations (contact hours, total hours, week counts), instructor and room conflict detection, and week-based scheduling tied to semester periods.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **Calendar and list view toggle** — View all scheduled classes on a weekly calendar grid or switch to a filterable, sortable table view with search, type/day filters, and cohort visibility.
 
-# Step 3: Install the necessary dependencies.
-npm i
+- **Attendance tracking** — Mark attendance per class session with present/absent/late/excused statuses, view monthly attendance summaries per student, and configure minimum attendance thresholds per session.
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+- **Scheduling framework settings** — Configure available days (Monday–Sunday), operating hours, and standard class durations to control what appears on the calendar and what options are available during class creation.
+
+- **Dashboard with alerts** — Overview of active subjects, student counts, weekly class totals, attendance rates, and scheduling conflict notifications.
+
+## Stack
+
+Built with [Lovable](https://lovable.dev) — React, TypeScript, Tailwind CSS, shadcn/ui, React Router, React Query.
+
+## What I learned / what I'd do differently
+
+The prototype confirmed that the most valuable feature is the conditional session builder — being able to define mixed delivery modes (e.g., Monday lecture on-campus, Thursday tutorial online) within a single class record dramatically reduces the number of separate entries administrators need to create. A v2 would prioritise backend persistence with Supabase, real-time room availability checks against a booking system, and a bulk class creation flow using templates for common configurations.
+
+## Status
+
+Prototype — not actively maintained.
 ```
 
-**Edit a file directly in GitHub**
+### Implementation
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Single file change — replace the entire contents of `README.md` with the content above.
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/d4889981-6e28-4b24-8f4e-25dc6e594c73) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
