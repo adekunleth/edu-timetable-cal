@@ -1,9 +1,4 @@
 
-
-## README Content
-
-Replace the current `README.md` with the following:
-
 ```markdown
 # ClassLens — Academic timetabling and attendance management prototype
 
