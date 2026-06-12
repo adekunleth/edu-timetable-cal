@@ -1,50 +1,40 @@
+## Plan: Create PRD Document
 
+Create a new file `PRD.md` at the project root containing a detailed Product Requirements Document for ClassLens based on what has been implemented so far.
 
-## README Content
+### Document Structure
 
-Replace the current `README.md` with the following:
+1. **Overview** — Product name, vision, problem statement, target users (academic administrators, course coordinators, timetabling officers).
 
-```markdown
-# ClassLens — Academic timetabling and attendance management prototype
+2. **Goals & Non-Goals** — Prototype goals (validate unified scheduling UX) and explicit non-goals (no backend persistence, no multi-tenant auth).
 
-**Live demo →** [id-preview--d4889981-6e28-4b24-8f4e-25dc6e594c73.lovable.app](https://id-preview--d4889981-6e28-4b24-8f4e-25dc6e594c73.lovable.app)
+3. **User Personas** — Admin, Course Coordinator, Instructor.
 
-A prototype built to explore whether a single, unified interface can handle the full complexity of academic class scheduling — from multi-session creation with conditional delivery modes to real-time conflict detection and attendance tracking.
+4. **Information Architecture** — Sidebar navigation: Dashboard, Calendar, Subjects, Attendance, Cohorts, Reports, Settings.
 
-## What it is
+5. **Feature Specifications** (detailed per module):
+   - **Dashboard** — Stats cards (active subjects, students, classes/week, attendance rate), today's schedule with mark-attendance action, alerts panel.
+   - **Calendar View** — Weekly grid + list view toggle, filters (type, day, cohort), "Add Class" entry point, color coding by delivery type.
+   - **Class Creation Form** — Sections: Academic Context (Subject dropdown combining code+title, academic year, study period, cohort), Schedule & Recurrence (start/end weeks derived from study period, excluded dates), Sessions (multi-session builder with day, time, instructor, delivery type/method, campus/building/room or online link, conditional fields), Attendance config (track toggle, min %, method), Description/notes/attachments. Auto-calculations: contact hours, total hours, number of weeks. Conflict detection for room/instructor.
+   - **Class List Table** — Columns: Subject (code + title), Cohort/Intake, Day, Time, Instructor, Type, Location. Sort/filter/search.
+   - **Attendance** — Session-based marking dialog (present/absent/late/excused), monthly summary view, "this month" filter with sample data.
+   - **Subjects, Cohorts, Reports** — Stub/placeholder pages.
+   - **Settings → Scheduling Framework** — Horizontal day selector (Mon–Fri default checked, Sat/Sun optional), operating start/end time, standard class durations. Selected days drive Calendar columns and form options.
 
-ClassLens is a timetabling tool for higher education administrators who need to create, schedule, and monitor classes across multiple campuses, delivery formats (on-campus, online, blended), and student cohorts. It was built to validate whether a form-driven workflow with smart defaults, automatic calculations, and inline conflict warnings could replace the spreadsheet-heavy processes many institutions still rely on. The target users are academic administrators, course coordinators, and timetabling officers.
+6. **Data Model (Frontend Types)** — `ClassSchedule`, `ClassSession`, enums for `DeliveryType`, `DeliveryMethod`, `AttendanceMethod`. State managed via `ClassesContext`.
 
-## Screenshots
+7. **Dropdown Reference Data** — Subjects, Instructors, Campuses, Buildings/Rooms, Study Periods, Cohorts (from `dropdownOptions.ts`).
 
-*(Add screenshots of the Dashboard, Calendar/List view, and Class Creation Form here)*
+8. **Business Rules** — Week generation from study period dates, conditional field visibility (delivery method), attendance threshold defaults.
 
-## Core features
+9. **UX & Design System** — shadcn/ui, Tailwind semantic tokens, color coding per delivery type (lecture/lab/tutorial/workshop/online).
 
-- **Class creation form** — A multi-section form with conditional logic (delivery method toggles location vs. online fields), automatic calculations (contact hours, total hours, week counts), instructor and room conflict detection, and week-based scheduling tied to semester periods.
+10. **Tech Stack** — React 18, Vite, TypeScript, Tailwind, shadcn/ui, React Router, React Query, date-fns.
 
-- **Calendar and list view toggle** — View all scheduled classes on a weekly calendar grid or switch to a filterable, sortable table view with search, type/day filters, and cohort visibility.
+11. **Known Limitations** — In-memory state only (no persistence), no auth, conflict detection is client-side, sample/seed data.
 
-- **Attendance tracking** — Mark attendance per class session with present/absent/late/excused statuses, view monthly attendance summaries per student, and configure minimum attendance thresholds per session.
+12. **Future Enhancements (v2)** — Lovable Cloud persistence, real room booking integration, bulk template creation, role-based access, notifications.
 
-- **Scheduling framework settings** — Configure available days (Monday–Sunday), operating hours, and standard class durations to control what appears on the calendar and what options are available during class creation.
+### Deliverable
 
-- **Dashboard with alerts** — Overview of active subjects, student counts, weekly class totals, attendance rates, and scheduling conflict notifications.
-
-## Stack
-
-Built with [Lovable](https://lovable.dev) — React, TypeScript, Tailwind CSS, shadcn/ui, React Router, React Query.
-
-## What I learned / what I'd do differently
-
-The prototype confirmed that the most valuable feature is the conditional session builder — being able to define mixed delivery modes (e.g., Monday lecture on-campus, Thursday tutorial online) within a single class record dramatically reduces the number of separate entries administrators need to create. A v2 would prioritise backend persistence with Supabase, real-time room availability checks against a booking system, and a bulk class creation flow using templates for common configurations.
-
-## Status
-
-Prototype — not actively maintained.
-```
-
-### Implementation
-
-Single file change — replace the entire contents of `README.md` with the content above.
-
+Single new file: `PRD.md` at project root. No code changes.
