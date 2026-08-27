@@ -7,10 +7,14 @@ import { AttendanceMarkingDialog } from "@/components/AttendanceMarkingDialog";
 import { useClasses } from "@/contexts/ClassesContext";
 import { ClassListTable } from "@/components/ClassListTable";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ClassFilterBar, FiltersEmptyState } from "@/components/ClassFilterBar";
+import { useFilters } from "@/contexts/FiltersContext";
+import { filterClasses } from "@/utils/classFilters";
 
 export default function CalendarView() {
   const navigate = useNavigate();
   const { classes } = useClasses();
+  const { filters } = useFilters();
   const [currentDate] = useState(new Date(2025, 2, 10)); // March 10, 2025
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
@@ -42,7 +46,8 @@ export default function CalendarView() {
   ];
 
   // Convert classes to schedule format for calendar view
-  const schedule = classes.flatMap((cls) =>
+  const filteredClasses = filterClasses(classes, filters);
+  const schedule = filteredClasses.flatMap((cls) =>
     cls.sessions.map((session) => {
       // Convert time to slot index
       const startHour = parseInt(session.startTime.split(":")[0]);
@@ -105,6 +110,8 @@ export default function CalendarView() {
         </div>
       </div>
 
+      <ClassFilterBar />
+
       {viewMode === "calendar" && (
         <>
           {/* Legend */}
@@ -124,6 +131,13 @@ export default function CalendarView() {
           </div>
 
           {/* Calendar Grid */}
+          {filteredClasses.length === 0 ? (
+            <Card>
+              <CardContent className="p-0">
+                <FiltersEmptyState />
+              </CardContent>
+            </Card>
+          ) : (
           <Card>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -207,6 +221,7 @@ export default function CalendarView() {
           </div>
         </CardContent>
       </Card>
+          )}
         </>
       )}
 
