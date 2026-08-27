@@ -215,13 +215,17 @@ export default function Attendance() {
                     <th className="p-3 text-left text-sm font-medium text-muted-foreground">
                       Attendance Rate
                     </th>
+                    <th className="p-3 text-right text-sm font-medium text-muted-foreground">
+                      Breakdown
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRecords.map((record) => (
                     <tr
                       key={record.id}
-                      className="border-b border-border hover:bg-muted/50"
+                      onClick={() => openBreakdown(record)}
+                      className="cursor-pointer border-b border-border hover:bg-muted/50"
                     >
                       <td className="p-3 text-sm font-medium text-foreground">
                         {record.student}
@@ -256,8 +260,21 @@ export default function Attendance() {
                           </span>
                         </div>
                       </td>
+                      <td className="p-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openBreakdown(record);
+                          }}
+                        >
+                          View
+                        </Button>
+                      </td>
                     </tr>
                   ))}
+
                 </tbody>
               </table>
             </div>
