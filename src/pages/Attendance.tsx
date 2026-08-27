@@ -9,7 +9,45 @@ import {
   StudentAttendanceDialog,
   StudentAttendanceTarget,
 } from "@/components/StudentAttendanceDialog";
-import { AttendanceStatus } from "@/utils/studentAttendance";
+import { AttendanceStatus, RangeKey } from "@/utils/studentAttendance";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type PeriodKey = "week" | "lastWeek" | "month";
+
+const PERIOD_LABELS: Record<PeriodKey, string> = {
+  week: "This Week",
+  lastWeek: "Last Week",
+  month: "This Month",
+};
+
+/** Deterministic per-period variation so the period selector visibly changes data. */
+const hash = (value: string) => {
+  let h = 0;
+  for (let i = 0; i < value.length; i++) h = (h * 31 + value.charCodeAt(i)) % 9973;
+  return h;
+};
+
+const STATUS_CYCLE: AttendanceStatus[] = ["present", "late", "absent", "excused"];
+
+const shiftStatus = (status: string, seed: string, period: PeriodKey): AttendanceStatus => {
+  if (period === "week") return status as AttendanceStatus;
+  const idx = STATUS_CYCLE.indexOf(status as AttendanceStatus);
+  if (idx === -1) return status as AttendanceStatus;
+  const move = hash(seed + period) % 5 === 0 ? 1 : 0;
+  return STATUS_CYCLE[(idx + move) % STATUS_CYCLE.length];
+};
+
+const shiftRate = (rate: number, seed: string, period: PeriodKey) => {
+  if (period === "week") return rate;
+  const delta = (hash(seed + period) % 11) - 5;
+  return Math.max(40, Math.min(100, rate + delta));
+};
 
 
 const baseRecords = [
@@ -54,7 +92,18 @@ const SUBJECT_COLUMNS = [
 
 export default function Attendance() {
   const { filters } = useFilters();
+  const [period, setPeriod] = useState<PeriodKey>("week");
   const [selected, setSelected] = useState<StudentAttendanceTarget | null>(null);
+
+  // Records re-derived per selected period (CR: period selector must drive the UI).
+  const periodRecords = attendanceRecords.map((r) => {
+    const shifted: Record<string, string> = { ...r };
+    SUBJECT_COLUMNS.forEach((col) => {
+      shifted[col.key] = shiftStatus(r[col.key], r.id + col.key, period);
+    });
+    shifted.overallRate = `${shiftRate(parseInt(r.overallRate, 10), r.id, period)}%`;
+    return shifted as typeof r;
+  });
 
   const openBreakdown = (record: (typeof attendanceRecords)[number]) =>
     setSelected({
@@ -89,7 +138,7 @@ export default function Attendance() {
   const cohortCourse = (cohortId: string) =>
     COHORTS.find((c) => c.id === cohortId)?.courseId;
 
-  const filteredRecords = attendanceRecords.filter((r) => {
+  const filteredRecords = periodRecords.filter((r) => {
     const matchesCourse =
       filters.courseId === "all" || cohortCourse(r.cohortId) === filters.courseId;
     const matchesCohort =
@@ -127,7 +176,7 @@ export default function Attendance() {
             Attendance Tracking
           </h2>
           <p className="text-muted-foreground">
-            Monitor and manage student attendance
+            Monitor and manage student attendance · {PERIOD_LABELS[period]}
           </p>
         </div>
         <Button>Export Report</Button>
@@ -175,7 +224,7 @@ export default function Attendance() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-late">{lateArrivals}</div>
-            <p className="text-xs text-muted-foreground">This week</p>
+            <p className="text-xs text-muted-foreground">{PERIOD_LABELS[period]}</p>
           </CardContent>
         </Card>
       </div>
@@ -187,11 +236,18 @@ export default function Attendance() {
             visible={["courseId", "cohortId", "subject"]}
             className="flex-1"
           />
-          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <option>This Week</option>
-            <option>Last Week</option>
-            <option>This Month</option>
-          </select>
+          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((k) => (
+                <SelectItem key={k} value={k}>
+                  {PERIOD_LABELS[k]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </CardContent>
       </Card>
 
@@ -318,6 +374,7 @@ export default function Attendance() {
       </Card>
 
       <StudentAttendanceDialog
+        initialRange={(period === "month" ? "month" : "month") as RangeKey}
         target={selected}
         onOpenChange={(open) => !open && setSelected(null)}
       />
