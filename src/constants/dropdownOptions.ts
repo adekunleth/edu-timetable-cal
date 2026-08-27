@@ -1,13 +1,27 @@
 // Dropdown options for class creation and scheduling
 
-export const SUBJECTS = [
-  { code: "BIO101", title: "Anatomy Basics", label: "BIO101 - Anatomy Basics" },
-  { code: "MATH301", title: "Advanced Calculus", label: "MATH301 - Advanced Calculus" },
-  { code: "PHYS202", title: "Quantum Physics", label: "PHYS202 - Quantum Physics" },
-  { code: "CHEM202", title: "Organic Chemistry", label: "CHEM202 - Organic Chemistry" },
-  { code: "CS101", title: "Introduction to Programming", label: "CS101 - Introduction to Programming" },
-  { code: "ENG201", title: "Technical Writing", label: "ENG201 - Technical Writing" },
+export interface CatalogSubject {
+  code: string;
+  title: string;
+  label: string;
+  /** Programmes/courses this subject belongs to (CR-002). */
+  courseIds: string[];
+}
+
+export const SUBJECTS: CatalogSubject[] = [
+  { code: "BIO101", title: "Anatomy Basics", label: "BIO101 - Anatomy Basics", courseIds: ["BSC-BIO"] },
+  { code: "MATH301", title: "Advanced Calculus", label: "MATH301 - Advanced Calculus", courseIds: ["BENG-MEC", "BIT-CS"] },
+  { code: "PHYS202", title: "Quantum Physics", label: "PHYS202 - Quantum Physics", courseIds: ["BSC-BIO", "BENG-MEC"] },
+  { code: "CHEM202", title: "Organic Chemistry", label: "CHEM202 - Organic Chemistry", courseIds: ["BSC-BIO"] },
+  { code: "CS101", title: "Introduction to Programming", label: "CS101 - Introduction to Programming", courseIds: ["BIT-CS"] },
+  { code: "ENG201", title: "Technical Writing", label: "ENG201 - Technical Writing", courseIds: ["BIT-CS", "BBUS", "BENG-MEC"] },
 ];
+
+export const getSubjectsForCourse = (courseId?: string): CatalogSubject[] =>
+  courseId && courseId !== "all"
+    ? SUBJECTS.filter((s) => s.courseIds.includes(courseId))
+    : SUBJECTS;
+
 
 export const INSTRUCTORS = [
   "Dr. Sarah Nguyen",
