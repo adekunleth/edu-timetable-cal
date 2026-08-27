@@ -316,6 +316,12 @@ export default function Attendance() {
           </div>
         </CardContent>
       </Card>
+
+      <StudentAttendanceDialog
+        target={selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+      />
     </div>
+
   );
 }
