@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useClasses } from "@/contexts/ClassesContext";
+import { useFilters } from "@/contexts/FiltersContext";
+import { filterClasses } from "@/utils/classFilters";
 import {
   Table,
   TableBody,
@@ -10,17 +12,16 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ClipboardCheck, Pencil, Trash2, Search, CheckCircle2, XCircle } from "lucide-react";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ClipboardCheck, Pencil, Trash2, CheckCircle2, XCircle } from "lucide-react";
 import { AttendanceMarkingDialog } from "./AttendanceMarkingDialog";
+import { FiltersEmptyState } from "./ClassFilterBar";
 import { ClassSchedule } from "@/types/classForm";
+import { getCohortLabel, getCourseCode } from "@/constants/dropdownOptions";
 
 const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -33,11 +34,31 @@ const typeColorMap: Record<string, string> = {
   Practical: "bg-practical/10 text-practical border-practical/30",
 };
 
+function CohortCell({ cohortIds }: { cohortIds: string[] }) {
+  if (!cohortIds || cohortIds.length === 0) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const labels = cohortIds.map(getCohortLabel);
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-sm">{labels[0]}</span>
+      {labels.length > 1 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="secondary" className="cursor-default">
+              +{labels.length - 1}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>{labels.join(", ")}</TooltipContent>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
+
 export function ClassListTable() {
   const { classes, deleteClass } = useClasses();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [dayFilter, setDayFilter] = useState<string>("all");
+  const { filters } = useFilters();
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<any>(null);
 
@@ -52,9 +73,10 @@ export function ClassListTable() {
         year: "numeric",
       }),
       time: `${session.startTime} - ${session.endTime}`,
-      room: session.deliveryMethod === "Online" 
-        ? "Online" 
-        : `${session.building} - ${session.room}`,
+      room:
+        session.deliveryMethod === "Online"
+          ? "Online"
+          : `${session.building} - ${session.room}`,
     });
     setAttendanceDialogOpen(true);
   };
@@ -65,115 +87,51 @@ export function ClassListTable() {
     }
   };
 
-  // Filter classes
-  const filteredClasses = classes.filter((cls) => {
-    const matchesSearch =
-      cls.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cls.title.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesType =
-      typeFilter === "all" ||
-      cls.sessions.some((s) => s.deliveryType === typeFilter);
-    
-    const matchesDay =
-      dayFilter === "all" ||
-      cls.sessions.some((s) => s.day === parseInt(dayFilter));
-
-    return matchesSearch && matchesType && matchesDay;
-  });
+  const filteredClasses = filterClasses(classes, filters);
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search by subject or title..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filter by type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="Lecture">Lecture</SelectItem>
-            <SelectItem value="Lab">Lab</SelectItem>
-            <SelectItem value="Tutorial">Tutorial</SelectItem>
-            <SelectItem value="Workshop">Workshop</SelectItem>
-            <SelectItem value="Online">Online</SelectItem>
-            <SelectItem value="Practical">Practical</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={dayFilter} onValueChange={setDayFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filter by day" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Days</SelectItem>
-            {weekDays.map((day, index) => (
-              <SelectItem key={day} value={index.toString()}>
-                {day}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Table */}
       <div className="rounded-md border border-border bg-card">
-        <Table>
-          <TableHeader>
-          <TableRow>
-            <TableHead>Subject</TableHead>
-            <TableHead>Cohort/Intake</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Schedule</TableHead>
-            <TableHead>Instructor</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Attendance</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredClasses.length === 0 ? (
+        {filteredClasses.length === 0 ? (
+          <FiltersEmptyState />
+        ) : (
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center">
-                  <p className="text-muted-foreground">No classes found.</p>
-                </TableCell>
+                <TableHead>Subject</TableHead>
+                <TableHead>Course</TableHead>
+                <TableHead>Cohort/Intake</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Schedule</TableHead>
+                <TableHead>Instructor</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Attendance</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ) : (
-              filteredClasses.map((cls) => {
-                const session = cls.sessions[0]; // For now, show first session
+            </TableHeader>
+            <TableBody>
+              {filteredClasses.map((cls) => {
+                const session = cls.sessions[0];
+                const courseCode = getCourseCode(cls.courseId);
                 return (
                   <TableRow key={cls.id}>
                     <TableCell className="font-medium">
                       {cls.subject} - {cls.title}
                     </TableCell>
                     <TableCell>
-                      {cls.cohort ? (
-                        cls.cohort
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                      {courseCode ?? <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={typeColorMap[session.deliveryType]}
-                      >
+                      <CohortCell cohortIds={cls.cohortIds} />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={typeColorMap[session.deliveryType]}>
                         {session.deliveryType}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div className="font-medium">
-                          {weekDays[session.day]}
-                        </div>
+                        <div className="font-medium">{weekDays[session.day]}</div>
                         <div className="text-muted-foreground">
                           {session.startTime} - {session.endTime}
                         </div>
@@ -186,9 +144,7 @@ export function ClassListTable() {
                       ) : (
                         <div className="text-sm">
                           <div>{session.room}</div>
-                          <div className="text-muted-foreground">
-                            {session.campus}
-                          </div>
+                          <div className="text-muted-foreground">{session.campus}</div>
                         </div>
                       )}
                     </TableCell>
@@ -214,11 +170,7 @@ export function ClassListTable() {
                         >
                           <ClipboardCheck className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          title="Edit Class"
-                        >
+                        <Button variant="ghost" size="icon" title="Edit Class">
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
@@ -233,10 +185,10 @@ export function ClassListTable() {
                     </TableCell>
                   </TableRow>
                 );
-              })
-            )}
-          </TableBody>
-        </Table>
+              })}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       {selectedClass && (
