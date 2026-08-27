@@ -1,9 +1,16 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
 import { ClassFilterBar, FiltersEmptyState } from "@/components/ClassFilterBar";
 import { useFilters } from "@/contexts/FiltersContext";
 import { COHORTS, getCohortLabel } from "@/constants/dropdownOptions";
+import {
+  StudentAttendanceDialog,
+  StudentAttendanceTarget,
+} from "@/components/StudentAttendanceDialog";
+import { AttendanceStatus } from "@/utils/studentAttendance";
+
 
 const baseRecords = [
   { student: "Alice Johnson", id: "S2024001", bio101: "present", math301: "present", phys202: "late", chem202: "present", cs101: "present", eng201: "present", overallRate: "92%" },
