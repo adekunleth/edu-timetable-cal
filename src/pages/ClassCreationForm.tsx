@@ -17,7 +17,8 @@ import { useClasses } from "@/contexts/ClassesContext";
 import { ClassSchedule, ClassSession, DeliveryType, DeliveryMethod } from "@/types/classForm";
 import { ChevronLeft, Save, Upload, Plus, Trash2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { SUBJECTS, INSTRUCTORS, CAMPUSES, BUILDINGS_ROOMS, STUDY_PERIODS, COHORTS } from "@/constants/dropdownOptions";
+import { SUBJECTS, INSTRUCTORS, CAMPUSES, BUILDINGS_ROOMS, STUDY_PERIODS, COHORTS, COURSES, getCohortsForCourse } from "@/constants/dropdownOptions";
+import { CohortMultiSelect } from "@/components/CohortMultiSelect";
 import { generateWeeksForPeriod, calculateNumberOfWeeks } from "@/utils/weekGenerator";
 
 const typeColorMap: Record<DeliveryType, string> = {
@@ -37,7 +38,22 @@ export default function ClassCreationForm() {
   // Academic Context
   const [selectedSubject, setSelectedSubject] = useState("");
   const [studyPeriod, setStudyPeriod] = useState("");
-  const [cohort, setCohort] = useState("");
+  const [courseId, setCourseId] = useState<string | undefined>(undefined);
+  const [cohortIds, setCohortIds] = useState<string[]>([]);
+
+  // Changing the course drops cohorts that no longer belong to it (CR-001 §10)
+  const handleCourseChange = (value: string) => {
+    const allowed = getCohortsForCourse(value).map((c) => c.id);
+    const kept = cohortIds.filter((id) => allowed.includes(id));
+    if (kept.length !== cohortIds.length) {
+      toast({
+        title: "Cohort selection updated",
+        description: "Cohorts that do not belong to the selected course were removed.",
+      });
+    }
+    setCohortIds(kept);
+    setCourseId(value);
+  };
 
   // Schedule
   const [startWeek, setStartWeek] = useState<number>();
@@ -190,6 +206,17 @@ export default function ClassCreationForm() {
     const startWeekData = availableWeeks.find(w => w.weekNumber === startWeek);
     const endWeekData = availableWeeks.find(w => w.weekNumber === endWeek);
 
+    // Infer the course from the selected cohorts when they all share one
+    const cohortCourseIds = Array.from(
+      new Set(
+        cohortIds
+          .map((id) => COHORTS.find((c) => c.id === id)?.courseId)
+          .filter(Boolean) as string[]
+      )
+    );
+    const resolvedCourseId =
+      courseId ?? (cohortCourseIds.length === 1 ? cohortCourseIds[0] : undefined);
+
     // Create class object
     const newClass: ClassSchedule = {
       id: `class-${Date.now()}`,
@@ -197,7 +224,8 @@ export default function ClassCreationForm() {
       title: subjectData.title,
       academicYear: period.id.split('-')[0],
       studyPeriod: period.label,
-      cohort: cohort || undefined,
+      courseId: resolvedCourseId,
+      cohortIds,
       startDate: startWeekData ? startWeekData.startDate.toISOString().split('T')[0] : '',
       endDate: endWeekData ? endWeekData.startDate.toISOString().split('T')[0] : '',
       sessions,
@@ -297,19 +325,28 @@ export default function ClassCreationForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cohort">Cohort / Intake (Optional)</Label>
-            <Select value={cohort} onValueChange={setCohort}>
-              <SelectTrigger id="cohort">
-                <SelectValue placeholder="Select cohort (optional)" />
+            <Label htmlFor="course">Course (Optional)</Label>
+            <Select value={courseId} onValueChange={handleCourseChange}>
+              <SelectTrigger id="course">
+                <SelectValue placeholder="Select course (optional)" />
               </SelectTrigger>
               <SelectContent>
-                {COHORTS.map((c) => (
-                  <SelectItem key={c} value={c}>
-                    {c}
+                {COURSES.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cohort / Intake (Optional)</Label>
+            <CohortMultiSelect
+              courseId={courseId}
+              value={cohortIds}
+              onChange={setCohortIds}
+            />
           </div>
         </CardContent>
       </Card>

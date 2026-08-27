@@ -38,8 +38,8 @@ export interface ClassSchedule {
   academicYear: string;
   studyPeriod: string;
   term?: string;
-  course?: string;
-  cohort?: string;
+  courseId?: string;      // FK -> COURSES.id
+  cohortIds: string[];    // FK[] -> COHORTS.id; [] = unassigned, never undefined
   
   // Schedule
   startDate: string;

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ClassesProvider } from "./contexts/ClassesContext";
+import { FiltersProvider } from "./contexts/FiltersContext";
 import Dashboard from "./pages/Dashboard";
 import CalendarView from "./pages/CalendarView";
 import ClassCreationForm from "./pages/ClassCreationForm";
@@ -21,6 +22,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <ClassesProvider>
+        <FiltersProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -38,6 +40,7 @@ const App = () => (
             </Routes>
           </Layout>
         </BrowserRouter>
+        </FiltersProvider>
       </ClassesProvider>
     </TooltipProvider>
   </QueryClientProvider>

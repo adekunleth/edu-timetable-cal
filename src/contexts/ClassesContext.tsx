@@ -18,7 +18,8 @@ const initialClasses: ClassSchedule[] = [
     title: "Anatomy Basics",
     academicYear: "2025",
     studyPeriod: "2025 Semester 1",
-    cohort: "2025 S1 Intake",
+    courseId: "BSC-BIO",
+    cohortIds: ["2025-S1-BIO"],
     startDate: "2025-03-10",
     endDate: "2025-06-13",
     sessions: [
@@ -47,7 +48,8 @@ const initialClasses: ClassSchedule[] = [
     title: "Organic Chemistry",
     academicYear: "2025",
     studyPeriod: "2025 Semester 1",
-    cohort: "2025 S1 Intake",
+    courseId: "BSC-BIO",
+    cohortIds: ["2025-S1-BIO", "2025-S2-BIO"],
     startDate: "2025-03-10",
     endDate: "2025-06-13",
     sessions: [
@@ -76,6 +78,7 @@ const initialClasses: ClassSchedule[] = [
     title: "Advanced Calculus",
     academicYear: "2025",
     studyPeriod: "2025 Semester 1",
+    cohortIds: [],
     startDate: "2025-03-10",
     endDate: "2025-06-13",
     sessions: [
@@ -104,7 +107,8 @@ const initialClasses: ClassSchedule[] = [
     title: "Quantum Physics",
     academicYear: "2025",
     studyPeriod: "2025 Semester 1",
-    cohort: "International Cohort A",
+    courseId: "BIT-CS",
+    cohortIds: ["INTL-A"],
     startDate: "2025-03-10",
     endDate: "2025-06-13",
     sessions: [
@@ -133,7 +137,7 @@ const initialClasses: ClassSchedule[] = [
     title: "Introduction to Programming",
     academicYear: "2025",
     studyPeriod: "2025 Semester 1",
-    cohort: "2025 S2 Intake",
+    cohortIds: ["2024-S2-CS"],
     startDate: "2025-03-10",
     endDate: "2025-06-13",
     sessions: [
@@ -162,6 +166,7 @@ const initialClasses: ClassSchedule[] = [
     title: "Technical Writing",
     academicYear: "2025",
     studyPeriod: "2025 Semester 1",
+    cohortIds: ["INTL-B", "2024-S2-CS"],
     startDate: "2025-03-10",
     endDate: "2025-06-13",
     sessions: [

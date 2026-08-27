@@ -41,10 +41,48 @@ export const STUDY_PERIODS = [
   { id: "2026-S1", label: "2026 Semester 1", startDate: "2026-02-23", endDate: "2026-06-26" },
 ];
 
-export const COHORTS = [
-  "2025 S1 Intake",
-  "2025 S2 Intake",
-  "2024 S2 Intake",
-  "International Cohort A",
-  "International Cohort B",
+// ---------------------------------------------------------------------------
+// Course reference entity (CR-001 §4.1). Selection value is `id`, not `label`.
+// ---------------------------------------------------------------------------
+export interface Course {
+  id: string;
+  code: string;
+  title: string;
+  label: string;
+}
+
+export const COURSES: Course[] = [
+  { id: "BSC-BIO", code: "BSC-BIO", title: "Bachelor of Science (Biology)", label: "BSC-BIO - Bachelor of Science (Biology)" },
+  { id: "BIT-CS", code: "BIT-CS", title: "Bachelor of Information Technology", label: "BIT-CS - Bachelor of Information Technology" },
+  { id: "BBUS", code: "BBUS", title: "Bachelor of Business", label: "BBUS - Bachelor of Business" },
+  { id: "BENG-MEC", code: "BENG-MEC", title: "Bachelor of Engineering (Mechanical)", label: "BENG-MEC - Bachelor of Engineering (Mechanical)" },
 ];
+
+// ---------------------------------------------------------------------------
+// Cohort reference entity (CR-001 §4.2). Labels kept verbatim from v0.2.
+// ---------------------------------------------------------------------------
+export interface Cohort {
+  id: string;
+  label: string;
+  courseId: string;
+}
+
+export const COHORTS: Cohort[] = [
+  { id: "2025-S1-BIO", label: "2025 S1 Intake", courseId: "BSC-BIO" },
+  { id: "2025-S2-BIO", label: "2025 S2 Intake", courseId: "BSC-BIO" },
+  { id: "2024-S2-CS", label: "2024 S2 Intake", courseId: "BIT-CS" },
+  { id: "INTL-A", label: "International Cohort A", courseId: "BIT-CS" },
+  { id: "INTL-B", label: "International Cohort B", courseId: "BBUS" },
+];
+
+export const getCohortsForCourse = (courseId?: string): Cohort[] =>
+  courseId && courseId !== "all"
+    ? COHORTS.filter((c) => c.courseId === courseId)
+    : COHORTS;
+
+/** Falls back to the raw id when a cohort is unknown (CR-001 §11.5). */
+export const getCohortLabel = (cohortId: string): string =>
+  COHORTS.find((c) => c.id === cohortId)?.label ?? cohortId;
+
+export const getCourseCode = (courseId?: string): string | undefined =>
+  courseId ? COURSES.find((c) => c.id === courseId)?.code ?? courseId : undefined;
