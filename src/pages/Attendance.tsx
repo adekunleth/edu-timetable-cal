@@ -1,9 +1,16 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
 import { ClassFilterBar, FiltersEmptyState } from "@/components/ClassFilterBar";
 import { useFilters } from "@/contexts/FiltersContext";
 import { COHORTS, getCohortLabel } from "@/constants/dropdownOptions";
+import {
+  StudentAttendanceDialog,
+  StudentAttendanceTarget,
+} from "@/components/StudentAttendanceDialog";
+import { AttendanceStatus } from "@/utils/studentAttendance";
+
 
 const baseRecords = [
   { student: "Alice Johnson", id: "S2024001", bio101: "present", math301: "present", phys202: "late", chem202: "present", cs101: "present", eng201: "present", overallRate: "92%" },
@@ -47,6 +54,22 @@ const SUBJECT_COLUMNS = [
 
 export default function Attendance() {
   const { filters } = useFilters();
+  const [selected, setSelected] = useState<StudentAttendanceTarget | null>(null);
+
+  const openBreakdown = (record: (typeof attendanceRecords)[number]) =>
+    setSelected({
+      student: record.student,
+      id: record.id,
+      cohortLabel: getCohortLabel(record.cohortId),
+      subjects: SUBJECT_COLUMNS.map((col) => ({
+        code: col.code,
+        currentStatus: (record as Record<string, string>)[col.key] as AttendanceStatus,
+      })),
+    });
+
+
+
+
 
   const getAttendanceIcon = (status: string) => {
     switch (status) {
@@ -205,13 +228,17 @@ export default function Attendance() {
                     <th className="p-3 text-left text-sm font-medium text-muted-foreground">
                       Attendance Rate
                     </th>
+                    <th className="p-3 text-right text-sm font-medium text-muted-foreground">
+                      Breakdown
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRecords.map((record) => (
                     <tr
                       key={record.id}
-                      className="border-b border-border hover:bg-muted/50"
+                      onClick={() => openBreakdown(record)}
+                      className="cursor-pointer border-b border-border hover:bg-muted/50"
                     >
                       <td className="p-3 text-sm font-medium text-foreground">
                         {record.student}
@@ -246,8 +273,21 @@ export default function Attendance() {
                           </span>
                         </div>
                       </td>
+                      <td className="p-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openBreakdown(record);
+                          }}
+                        >
+                          View
+                        </Button>
+                      </td>
                     </tr>
                   ))}
+
                 </tbody>
               </table>
             </div>
@@ -276,6 +316,12 @@ export default function Attendance() {
           </div>
         </CardContent>
       </Card>
+
+      <StudentAttendanceDialog
+        target={selected}
+        onOpenChange={(open) => !open && setSelected(null)}
+      />
     </div>
+
   );
 }
