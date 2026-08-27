@@ -45,9 +45,11 @@ function CohortCell({ cohortIds }: { cohortIds: string[] }) {
       {labels.length > 1 && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="secondary" className="cursor-default">
-              +{labels.length - 1}
-            </Badge>
+            <span>
+              <Badge variant="secondary" className="cursor-default">
+                +{labels.length - 1}
+              </Badge>
+            </span>
           </TooltipTrigger>
           <TooltipContent>{labels.join(", ")}</TooltipContent>
         </Tooltip>
