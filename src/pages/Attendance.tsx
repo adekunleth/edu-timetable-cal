@@ -9,7 +9,7 @@ import {
   StudentAttendanceDialog,
   StudentAttendanceTarget,
 } from "@/components/StudentAttendanceDialog";
-import { AttendanceStatus, RangeKey } from "@/utils/studentAttendance";
+import { AttendanceStatus } from "@/utils/studentAttendance";
 import {
   Select,
   SelectContent,
@@ -374,7 +374,6 @@ export default function Attendance() {
       </Card>
 
       <StudentAttendanceDialog
-        initialRange={(period === "month" ? "month" : "month") as RangeKey}
         target={selected}
         onOpenChange={(open) => !open && setSelected(null)}
       />
