@@ -221,6 +221,13 @@ export default function Cohorts() {
           </Card>
         ))}
       </div>
+
+      {filteredCohorts.length === 0 && (
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <p className="text-muted-foreground">No cohorts match the current filters</p>
+          <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
+        </div>
+      )}
     </div>
   );
 }
