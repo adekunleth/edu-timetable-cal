@@ -54,6 +54,9 @@ const SUBJECT_COLUMNS = [
 
 export default function Attendance() {
   const { filters } = useFilters();
+  const [selected, setSelected] = useState<StudentAttendanceTarget | null>(null);
+
+
 
   const getAttendanceIcon = (status: string) => {
     switch (status) {
