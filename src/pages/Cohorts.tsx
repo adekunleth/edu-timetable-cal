@@ -1,8 +1,19 @@
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Cohorts() {
+  const [program, setProgram] = useState("all");
+  const [campus, setCampus] = useState("all");
+  const [intake, setIntake] = useState("all");
   const cohorts = [
     {
       name: "Nursing 2025",
@@ -46,6 +57,30 @@ export default function Cohorts() {
     },
   ];
 
+  const unique = (key: "program" | "campus" | "intake") =>
+    Array.from(new Set(cohorts.map((c) => c[key])));
+  const programOptions = unique("program");
+  const campusOptions = unique("campus");
+  const intakeOptions = unique("intake");
+
+  const filteredCohorts = useMemo(
+    () =>
+      cohorts.filter(
+        (c) =>
+          (program === "all" || c.program === program) &&
+          (campus === "all" || c.campus === campus) &&
+          (intake === "all" || c.intake === intake)
+      ),
+    [cohorts, program, campus, intake]
+  );
+
+  const activeCount = [program, campus, intake].filter((v) => v !== "all").length;
+  const clearFilters = () => {
+    setProgram("all");
+    setCampus("all");
+    setIntake("all");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -65,30 +100,55 @@ export default function Cohorts() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="flex gap-4 p-4">
-          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <option>All Programs</option>
-            <option>Bachelor of Nursing</option>
-            <option>Bachelor of Science</option>
-            <option>Bachelor of Engineering</option>
-          </select>
-          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <option>All Campuses</option>
-            <option>Sydney Campus</option>
-            <option>Melbourne Campus</option>
-          </select>
-          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <option>All Intakes</option>
-            <option>February 2025</option>
-            <option>July 2024</option>
-            <option>February 2024</option>
-          </select>
+        <CardContent className="flex flex-wrap items-center gap-4 p-4">
+          <Select value={program} onValueChange={setProgram}>
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Program" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Programs</SelectItem>
+              {programOptions.map((o) => (
+                <SelectItem key={o} value={o}>{o}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={campus} onValueChange={setCampus}>
+            <SelectTrigger className="w-[190px]">
+              <SelectValue placeholder="Campus" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Campuses</SelectItem>
+              {campusOptions.map((o) => (
+                <SelectItem key={o} value={o}>{o}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={intake} onValueChange={setIntake}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Intake" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Intakes</SelectItem>
+              {intakeOptions.map((o) => (
+                <SelectItem key={o} value={o}>{o}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {activeCount > 0 && (
+            <Button variant="ghost" onClick={clearFilters} className="gap-1">
+              <X className="h-4 w-4" />
+              Clear filters ({activeCount})
+            </Button>
+          )}
+          <span className="ml-auto text-sm text-muted-foreground">
+            {filteredCohorts.length} of {cohorts.length} cohorts
+          </span>
         </CardContent>
       </Card>
 
       {/* Cohorts Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {cohorts.map((cohort, index) => (
+        {filteredCohorts.map((cohort, index) => (
           <Card key={index} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -161,6 +221,13 @@ export default function Cohorts() {
           </Card>
         ))}
       </div>
+
+      {filteredCohorts.length === 0 && (
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <p className="text-muted-foreground">No cohorts match the current filters</p>
+          <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
+        </div>
+      )}
     </div>
   );
 }

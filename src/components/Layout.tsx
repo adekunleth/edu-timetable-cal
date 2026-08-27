@@ -1,6 +1,13 @@
-import { ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { ReactNode, useState } from "react";
+import { Link, useLocation, Navigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Calendar,
   BookOpen,
@@ -15,18 +22,37 @@ interface LayoutProps {
   children: ReactNode;
 }
 
+type Role = "admin" | "teacher" | "student";
+
+const ROLE_LABELS: Record<Role, string> = {
+  admin: "Administrator",
+  teacher: "Teacher",
+  student: "Student",
+};
+
+// Each role only sees the sections it can act on.
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Calendar", href: "/calendar", icon: Calendar },
-  { name: "Subjects", href: "/subjects", icon: BookOpen },
-  { name: "Attendance", href: "/attendance", icon: ClipboardList },
-  { name: "Cohorts", href: "/cohorts", icon: Users },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Settings", href: "/settings", icon: Settings },
-];
+  { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["admin", "teacher", "student"] },
+  { name: "Calendar", href: "/calendar", icon: Calendar, roles: ["admin", "teacher", "student"] },
+  { name: "Subjects", href: "/subjects", icon: BookOpen, roles: ["admin", "teacher"] },
+  { name: "Attendance", href: "/attendance", icon: ClipboardList, roles: ["admin", "teacher", "student"] },
+  { name: "Cohorts", href: "/cohorts", icon: Users, roles: ["admin", "teacher"] },
+  { name: "Reports", href: "/reports", icon: BarChart3, roles: ["admin"] },
+  { name: "Settings", href: "/settings", icon: Settings, roles: ["admin"] },
+] as const;
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const [role, setRole] = useState<Role>("admin");
+
+  const visibleNav = navigation.filter((item) =>
+    (item.roles as readonly string[]).includes(role)
+  );
+
+  // Switching to a narrower role while on a restricted page sends you home.
+  const currentAllowed =
+    location.pathname.startsWith("/calendar") ||
+    visibleNav.some((item) => item.href === location.pathname);
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -39,7 +65,7 @@ export function Layout({ children }: LayoutProps) {
           </span>
         </div>
         <nav className="space-y-1 p-4">
-          {navigation.map((item) => {
+          {visibleNav.map((item) => {
             const isActive = location.pathname === item.href;
             return (
               <Link
@@ -69,17 +95,26 @@ export function Layout({ children }: LayoutProps) {
               Timetable Management System
             </h1>
             <div className="flex items-center gap-4">
-              <select className="rounded-md border border-input bg-background px-3 py-1.5 text-sm">
-                <option>Administrator</option>
-                <option>Teacher</option>
-                <option>Student</option>
-              </select>
+              <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+                <SelectTrigger className="w-[170px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(ROLE_LABELS) as Role[]).map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="p-6">{children}</main>
+        <main className="p-6">
+          {currentAllowed ? children : <Navigate to="/" replace />}
+        </main>
       </div>
     </div>
   );

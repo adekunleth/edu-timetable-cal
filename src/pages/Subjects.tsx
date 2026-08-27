@@ -1,8 +1,19 @@
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Subjects() {
+  const [semester, setSemester] = useState("all");
+  const [campus, setCampus] = useState("all");
+  const [type, setType] = useState("all");
   const subjects = [
     {
       code: "BIO101",
@@ -69,6 +80,30 @@ export default function Subjects() {
     Online: "bg-online/10 text-online",
   };
 
+  const unique = (key: "semester" | "campus" | "type") =>
+    Array.from(new Set(subjects.map((s) => s[key])));
+  const semesterOptions = unique("semester");
+  const campusOptions = unique("campus");
+  const typeOptions = unique("type");
+
+  const filteredSubjects = useMemo(
+    () =>
+      subjects.filter(
+        (s) =>
+          (semester === "all" || s.semester === semester) &&
+          (campus === "all" || s.campus === campus) &&
+          (type === "all" || s.type === type)
+      ),
+    [subjects, semester, campus, type]
+  );
+
+  const activeCount = [semester, campus, type].filter((v) => v !== "all").length;
+  const clearFilters = () => {
+    setSemester("all");
+    setCampus("all");
+    setType("all");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -88,24 +123,49 @@ export default function Subjects() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="flex gap-4 p-4">
-          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <option>All Semesters</option>
-            <option>Semester 1</option>
-            <option>Semester 2</option>
-          </select>
-          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <option>All Campuses</option>
-            <option>Sydney Campus</option>
-            <option>Melbourne Campus</option>
-          </select>
-          <select className="rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <option>All Types</option>
-            <option>Lecture</option>
-            <option>Lab</option>
-            <option>Tutorial</option>
-            <option>Workshop</option>
-          </select>
+        <CardContent className="flex flex-wrap items-center gap-4 p-4">
+          <Select value={semester} onValueChange={setSemester}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Semester" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Semesters</SelectItem>
+              {semesterOptions.map((o) => (
+                <SelectItem key={o} value={o}>{o}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={campus} onValueChange={setCampus}>
+            <SelectTrigger className="w-[190px]">
+              <SelectValue placeholder="Campus" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Campuses</SelectItem>
+              {campusOptions.map((o) => (
+                <SelectItem key={o} value={o}>{o}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={type} onValueChange={setType}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {typeOptions.map((o) => (
+                <SelectItem key={o} value={o}>{o}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {activeCount > 0 && (
+            <Button variant="ghost" onClick={clearFilters} className="gap-1">
+              <X className="h-4 w-4" />
+              Clear filters ({activeCount})
+            </Button>
+          )}
+          <span className="ml-auto text-sm text-muted-foreground">
+            {filteredSubjects.length} of {subjects.length} subjects
+          </span>
         </CardContent>
       </Card>
 
@@ -149,7 +209,7 @@ export default function Subjects() {
                 </tr>
               </thead>
               <tbody>
-                {subjects.map((subject) => (
+                {filteredSubjects.map((subject) => (
                   <tr
                     key={subject.code}
                     className="border-b border-border hover:bg-muted/50"
@@ -198,6 +258,12 @@ export default function Subjects() {
                 ))}
               </tbody>
             </table>
+            {filteredSubjects.length === 0 && (
+              <div className="flex flex-col items-center gap-3 py-16 text-center">
+                <p className="text-muted-foreground">No subjects match the current filters</p>
+                <Button variant="outline" onClick={clearFilters}>Clear filters</Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

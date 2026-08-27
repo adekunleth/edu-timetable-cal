@@ -4,6 +4,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const PERIOD_SYSTEMS = {
+  semester: { label: "Semester System (2 periods)", periods: ["Semester 1", "Semester 2"] },
+  trimester: { label: "Trimester System (3 periods)", periods: ["Trimester 1", "Trimester 2", "Trimester 3"] },
+  quarter: { label: "Quarter System (4 periods)", periods: ["Quarter 1", "Quarter 2", "Quarter 3", "Quarter 4"] },
+} as const;
+
+type PeriodSystem = keyof typeof PERIOD_SYSTEMS;
+
+const DURATIONS = {
+  "1": "1 hour",
+  "1.5": "1.5 hours",
+  "2": "2 hours",
+  "3": "3 hours",
+} as const;
 
 export default function Settings() {
   const [schedulingDays, setSchedulingDays] = useState({
@@ -15,6 +37,22 @@ export default function Settings() {
     saturday: false,
     sunday: false,
   });
+
+  const [periodSystem, setPeriodSystem] = useState<PeriodSystem>("semester");
+  const [classDuration, setClassDuration] = useState<keyof typeof DURATIONS>("1");
+  const [holidayType, setHolidayType] = useState("Public Holiday");
+  const [dayStart, setDayStart] = useState("08:00");
+  const [dayEnd, setDayEnd] = useState("19:00");
+
+  const activeDays = Object.entries(schedulingDays).filter(([, v]) => v).length;
+  const toHours = (t: string) => {
+    const [h, m] = t.split(":").map(Number);
+    return h + m / 60;
+  };
+  const slotsPerDay = Math.max(
+    0,
+    Math.floor((toHours(dayEnd) - toHours(dayStart)) / parseFloat(classDuration))
+  );
 
   const toggleDay = (day: keyof typeof schedulingDays) => {
     setSchedulingDays(prev => ({ ...prev, [day]: !prev[day] }));
@@ -42,22 +80,31 @@ export default function Settings() {
             </div>
             <div className="space-y-2">
               <Label>Study Periods</Label>
-              <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <option>Semester System (2 periods)</option>
-                <option>Trimester System (3 periods)</option>
-                <option>Quarter System (4 periods)</option>
-              </select>
+              <Select value={periodSystem} onValueChange={(v) => setPeriodSystem(v as PeriodSystem)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(PERIOD_SYSTEMS) as PeriodSystem[]).map((k) => (
+                    <SelectItem key={k} value={k}>
+                      {PERIOD_SYSTEMS[k].label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Semester 1 Start</Label>
-                <Input type="date" />
+            {PERIOD_SYSTEMS[periodSystem].periods.map((name) => (
+              <div key={name} className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{name} Start</Label>
+                  <Input type="date" />
+                </div>
+                <div className="space-y-2">
+                  <Label>{name} End</Label>
+                  <Input type="date" />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Semester 1 End</Label>
-                <Input type="date" />
-              </div>
-            </div>
+            ))}
             <Button className="w-full">Save Academic Calendar</Button>
           </CardContent>
         </Card>
@@ -96,21 +143,31 @@ export default function Settings() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Start Time</Label>
-                <Input type="time" defaultValue="08:00" />
+                <Input type="time" value={dayStart} onChange={(e) => setDayStart(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>End Time</Label>
-                <Input type="time" defaultValue="19:00" />
+                <Input type="time" value={dayEnd} onChange={(e) => setDayEnd(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
               <Label>Standard Class Duration</Label>
-              <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <option>1 hour</option>
-                <option>1.5 hours</option>
-                <option>2 hours</option>
-                <option>3 hours</option>
-              </select>
+              <Select value={classDuration} onValueChange={(v) => setClassDuration(v as keyof typeof DURATIONS)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(DURATIONS) as (keyof typeof DURATIONS)[]).map((k) => (
+                    <SelectItem key={k} value={k}>
+                      {DURATIONS[k]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {slotsPerDay} slots/day × {activeDays} day{activeDays === 1 ? "" : "s"} ={" "}
+                {slotsPerDay * activeDays} teachable slots per week
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Break Duration (minutes)</Label>
@@ -142,11 +199,21 @@ export default function Settings() {
             </div>
             <div className="space-y-2">
               <Label>Holiday Type</Label>
-              <select className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                <option>Public Holiday</option>
-                <option>Institutional Holiday</option>
-                <option>Break Period</option>
-              </select>
+              <Select value={holidayType} onValueChange={setHolidayType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {["Public Holiday", "Institutional Holiday", "Break Period"].map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {holidayType === "Break Period"
+                  ? "Break periods exclude every class in the range from attendance."
+                  : "Classes on this date are cancelled and excluded from contact hours."}
+              </p>
             </div>
             <Button className="w-full">Add Holiday</Button>
           </CardContent>
