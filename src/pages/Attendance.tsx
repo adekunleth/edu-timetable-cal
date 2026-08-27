@@ -56,6 +56,19 @@ export default function Attendance() {
   const { filters } = useFilters();
   const [selected, setSelected] = useState<StudentAttendanceTarget | null>(null);
 
+  const openBreakdown = (record: (typeof attendanceRecords)[number]) =>
+    setSelected({
+      student: record.student,
+      id: record.id,
+      cohortLabel: getCohortLabel(record.cohortId),
+      subjects: SUBJECT_COLUMNS.map((col) => ({
+        code: col.code,
+        currentStatus: (record as Record<string, string>)[col.key] as AttendanceStatus,
+      })),
+    });
+
+
+
 
 
   const getAttendanceIcon = (status: string) => {
