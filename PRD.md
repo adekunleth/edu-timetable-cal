@@ -36,6 +36,8 @@ interface ClassesContextType {
 
 The provider wraps the app; every page reads/writes through `useClasses()`. The calendar grid, list table, and conflict detection in the creation form all derive from this one array, so a newly published class appears everywhere immediately without any sync logic.
 
+A second provider, `FiltersProvider` (`src/contexts/FiltersContext.tsx`), sits alongside it and holds the shared browsing filters (course, cohort, subject, instructor, campus, type, day, search). It is mounted above the router so filter selections survive navigation between Calendar, List and Attendance — see §14.
+
 ### 2.2 Seed data
 
 Six `ClassSchedule` records ship as initial state (`initialClasses`), covering every delivery type and method: on-campus Lecture/Lab/Tutorial/Workshop sessions and one fully Online session with `trackAttendance: false`. Seed records use realistic overlapping-free slots across Mon–Fri so the calendar grid is populated on first load.
@@ -216,6 +218,8 @@ Free-text Description and Internal Notes; empty strings are stored as `undefined
 ### 5.1 View toggle
 
 A `Tabs` control switches `viewMode` between `"calendar"` and `"list"`. Week navigation buttons (prev / Today / next) render **only in calendar mode**; in the prototype they are visual placeholders and the week is fixed to **March 10–14, 2025**. "Add Class" routes to the creation form in both modes.
+
+A `ClassFilterBar` sits above the toggle and applies to **both** views: switching between calendar and list preserves the active filters, since the state lives in `FiltersContext` rather than the page.
 
 ### 5.2 Grid rendering logic
 
