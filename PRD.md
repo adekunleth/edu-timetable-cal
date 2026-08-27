@@ -1,6 +1,6 @@
 # ClassLens — Product Requirements Document (Detailed Logic Specification)
 
-**Version:** 0.2 (Prototype)
+**Version:** 0.3 (Prototype — includes CR-001 Course & Cohort Scoping)
 **Status:** Implemented in prototype, not production-ready
 **Last updated:** August 2026
 
@@ -36,6 +36,8 @@ interface ClassesContextType {
 
 The provider wraps the app; every page reads/writes through `useClasses()`. The calendar grid, list table, and conflict detection in the creation form all derive from this one array, so a newly published class appears everywhere immediately without any sync logic.
 
+A second provider, `FiltersProvider` (`src/contexts/FiltersContext.tsx`), sits alongside it and holds the shared browsing filters (course, cohort, subject, instructor, campus, type, day, search). It is mounted above the router so filter selections survive navigation between Calendar, List and Attendance — see §14.
+
 ### 2.2 Seed data
 
 Six `ClassSchedule` records ship as initial state (`initialClasses`), covering every delivery type and method: on-campus Lecture/Lab/Tutorial/Workshop sessions and one fully Online session with `trackAttendance: false`. Seed records use realistic overlapping-free slots across Mon–Fri so the calendar grid is populated on first load.
@@ -49,7 +51,8 @@ Six `ClassSchedule` records ship as initial state (`initialClasses`), covering e
 - **CAMPUSES** — Sydney, Melbourne, Brisbane, Perth.
 - **BUILDINGS_ROOMS** — 7 entries in the combined format `"Building X - Room NNN"`. The form splits this string on `" - Room "` to populate separate `building` and `room` fields.
 - **STUDY_PERIODS** — each has `{ id, label, startDate, endDate }` (e.g. `2025-S1`, `"2025 Semester 1"`, `2025-02-24` → `2025-06-27`). The dates drive week generation.
-- **COHORTS** — 5 intake labels.
+- **COURSES** — 4 course entities as `{ id, code, title, label }` (`BSC-BIO`, `BIT-CS`, `BBUS`, `BENG-MEC`). Selection value is `id`, never the label.
+- **COHORTS** — 5 cohort entities as `{ id, label, courseId }`, each owned by exactly one course. Helpers: `getCohortsForCourse(courseId)` (returns all cohorts when the argument is `"all"`/undefined), `getCohortLabel(id)` (falls back to the raw id for unknown ids), `getCourseCode(id)`.
 
 ### 2.4 Core types
 
@@ -88,8 +91,8 @@ interface ClassSchedule {
   academicYear: string;     // derived: period.id.split('-')[0]
   studyPeriod: string;      // period label, e.g. "2025 Semester 1"
   term?: string;
-  course?: string;
-  cohort?: string;
+  courseId?: string;        // FK → COURSES.id; optional (quick-publish flow)
+  cohortIds: string[];      // FK[] → COHORTS.id; [] means "unassigned", never undefined
   startDate: string;        // ISO date of the chosen start week's Monday
   endDate: string;          // ISO date of the chosen end week's Monday
   excludedDates?: { date: string; reason: string }[];
@@ -131,7 +134,8 @@ The form (`src/pages/ClassCreationForm.tsx`) is the heart of the prototype. It i
 |---|---|
 | **Subject** * | Single dropdown of `SUBJECTS[].label`. The selected value is the full label string; at publish time the form looks the label up in `SUBJECTS` to recover `code` and `title`. |
 | **Study Period** * | Dropdown of `STUDY_PERIODS`. **Changing it resets `startWeek` and `endWeek` to `undefined`** because the generated week list is period-specific. |
-| **Cohort / Intake** | Optional dropdown of `COHORTS`; omitted from the record when empty. |
+| **Course** | Optional dropdown of `COURSES` (value = `Course.id`). Changing it **prunes any selected cohorts that do not belong to the new course**. |
+| **Cohort / Intake** | Optional multi-select (`CohortMultiSelect`, Popover + Command + checkbox list). Options are `getCohortsForCourse(courseId)` — all cohorts when no course is chosen. Stored as `cohortIds: string[]`; an empty array is persisted (never `undefined`). The trigger shows up to two cohort labels then `+N`. |
 
 ### 4.2 Schedule & Recurrence
 
@@ -215,6 +219,8 @@ Free-text Description and Internal Notes; empty strings are stored as `undefined
 
 A `Tabs` control switches `viewMode` between `"calendar"` and `"list"`. Week navigation buttons (prev / Today / next) render **only in calendar mode**; in the prototype they are visual placeholders and the week is fixed to **March 10–14, 2025**. "Add Class" routes to the creation form in both modes.
 
+A `ClassFilterBar` sits above the toggle and applies to **both** views: switching between calendar and list preserves the active filters, since the state lives in `FiltersContext` rather than the page.
+
 ### 5.2 Grid rendering logic
 
 The grid is 6 columns (time gutter + Mon–Fri) × 10 hourly rows (8:00 AM–5:00 PM). Classes are flattened into positioned blocks:
@@ -246,17 +252,11 @@ Each block has a hover-revealed "Mark" button (`opacity-0 → group-hover:opacit
 
 `src/components/ClassListTable.tsx` renders the same `classes` array as a table — one row per class, using **`sessions[0]`** as the representative session for schedule/instructor/location/attendance columns (a documented simplification for multi-session classes).
 
-**Columns:** Subject (`CODE - Title`), Cohort/Intake (em-dash when unset), Type (colour-coded badge), Schedule (day name + time range), Instructor, Location ("Online" or room + campus), Attendance (green check + min % when tracked, muted ✕ otherwise), Actions.
+**Columns:** Subject (`CODE - Title`), Course (course code, em-dash when unset), Cohort/Intake (badge per cohort; two badges then a `+N` badge whose tooltip lists the remainder — the tooltip trigger wraps the badge in a `span` because Radix cannot attach a ref to the Badge component; em-dash when unassigned), Type (colour-coded badge), Schedule (day name + time range), Instructor, Location ("Online" or room + campus), Attendance (green check + min % when tracked, muted ✕ otherwise), Actions.
 
-**Filtering** — three AND-combined predicates:
+**Filtering** — the table consumes the shared `FiltersContext` (see §14) via `filterClasses`, so search, course, cohort, subject, instructor, campus, type and day all apply here with the exact same predicates as the calendar grid. When the result set is empty it renders `FiltersEmptyState` with a "Clear filters" button.
 
-```ts
-matchesSearch = subject or title includes query (case-insensitive)
-matchesType   = filter "all" OR any session has that deliveryType
-matchesDay    = filter "all" OR any session has that day index
-```
-
-Note type/day filters match if **any** session matches, even though the row displays session 0.
+Note session-level filters (instructor, campus, type, day) match if **any** session matches, even though the row displays session 0.
 
 **Actions per row:** Mark Attendance (opens the dialog with real dates/times derived from the record), Edit (placeholder), Delete (native `confirm()` then `deleteClass`).
 
@@ -279,11 +279,12 @@ Each status has a dedicated colour token (`present`, `absent`, `late`, `excused`
 
 ## 8. Attendance Page (`/attendance`)
 
-A read-only reporting view over a hardcoded matrix: 20 students × 6 subjects, each cell one of present/absent/late/excused, rendered as a coloured icon, plus a per-student overall rate.
+A reporting view over a hardcoded matrix: 20 students × 6 subjects, each cell one of present/absent/late/excused, rendered as a coloured icon, plus a per-student overall rate. Every student record now carries a `cohortId` (and therefore an implied course), so the shared filter bar applies here too.
 
-- **Summary cards:** Average Attendance (87%), Below Threshold (count of students < 80%), Perfect Attendance (count at 100%), Late Arrivals this week.
+- **Filtering:** the page renders `ClassFilterBar` with the course/cohort/subject subset of controls. Students are filtered by cohort → course membership; subject filtering narrows the **columns** shown rather than the rows.
+- **Summary cards:** Average Attendance, Below Threshold (< 80%), Perfect Attendance (100%), Late Arrivals — all recomputed from the *filtered* student set, and rendered as `—` when the filters exclude everyone.
 - **Rate bar logic:** each row's progress bar is green (`bg-present`) when `rate >= 80`, red (`bg-destructive`) below — matching the default minimum-attendance threshold used in the creation form.
-- **Filters:** cohort / subject / period selects (including "This Month") are present but non-functional — the dataset is static so the view is populated on first load.
+- Filter selections persist when navigating between Calendar, List and Attendance because the provider sits above the router.
 
 ---
 
@@ -323,7 +324,9 @@ Four configuration cards. Only one piece of state is real:
 5. **Room conflicts are advisory** — they warn but don't block; instructor conflicts and intra-form session conflicts aren't checked.
 6. **Settings day selection is not wired** to the calendar grid or creation form.
 7. **Edit and Save-as-Draft are placeholders** with no handlers.
-8. **Attendance page filters are decorative**; the matrix is static seed data.
+8. **Attendance matrix is static seed data** — filters narrow it, but no marks are written back.
+9. **Cohorts are class-level, not session-level** — a split tutorial cannot be scoped to one cohort while the lecture serves all (see §14.7).
+10. **Course is optional** on a class, so a course filter relies on cohort inference for records that omit it.
 
 ## 13. Future Enhancements (v2)
 
@@ -334,3 +337,90 @@ Four configuration cards. Only one piece of state is real:
 5. Blocking conflict validation, instructor clash detection, and cross-session checks within the form.
 6. Bulk class creation from templates; real room-availability integration.
 7. Notifications for low attendance and class reminders.
+8. Session-level cohort assignment and URL-encoded filter state (shareable filtered views).
+
+---
+
+## 14. Course & Cohort Scoping (CR-001)
+
+### 14.1 Rationale
+
+Before CR-001 a cohort was a free-text label on a class and nothing consumed it. Timetabling officers work per course intake, so every browsing surface (calendar, list, attendance) needed to be scopable to a Course and/or Cohort, with the selection surviving navigation between screens.
+
+### 14.2 Reference model
+
+```
+Course (1) ──< Cohort (n) ──< (m) ClassSchedule.cohortIds
+                  ClassSchedule.courseId ─────┘ (optional direct link)
+```
+
+- A cohort belongs to exactly one course (`Cohort.courseId`).
+- A class may reference a course directly, a set of cohorts, both, or neither.
+- Selection values are always ids; labels are derived for display only.
+
+### 14.3 Shared filter state
+
+`src/contexts/FiltersContext.tsx` holds one object mounted above the router in `App.tsx`, so state persists across route changes and resets only on refresh:
+
+```ts
+interface ClassFilters {
+  search: string;         // free text
+  courseId: string;       // "all" | Course.id
+  cohortId: string;       // "all" | "unassigned" | Cohort.id
+  subject: string;        // "all" | subject code
+  instructor: string;     // "all" | instructor name
+  campus: string;         // "all" | campus name
+  deliveryType: string;   // "all" | DeliveryType
+  day: string;            // "all" | "0".."4"
+}
+```
+
+- `setFilter(key, value)` is immutable and encodes one dependency: **setting `courseId` resets `cohortId` to `"all"`**, because the cohort options list is course-dependent and a stale cohort would silently produce zero results.
+- `resetFilters()` restores `defaultFilters` (every key `"all"`, search empty).
+- `activeFilterCount` (memoised) counts keys that are not `"all"`, treating `search` as active only when it is non-blank after trimming. It drives the "Clear filters (N)" button, which only renders above zero.
+
+### 14.4 Filter predicates
+
+`src/utils/classFilters.ts` is the single source of truth, so every screen filters identically.
+
+```ts
+matchesCourse(cls, courseId)
+  = courseId === "all"
+  || cls.courseId === courseId
+  || cls.cohortIds.some(id => COHORTS.find(c => c.id === id)?.courseId === courseId);
+
+matchesCohort(cls, cohortId)
+  = cohortId === "all"        ? true
+  : cohortId === "unassigned" ? cls.cohortIds.length === 0
+  :                             cls.cohortIds.includes(cohortId);
+```
+
+Rules encoded:
+- **Course match is transitive** — a class tagged only with cohort `2025-S1-BIO` still matches course `BSC-BIO`. This keeps legacy/quick-published records reachable.
+- `"all"` is a no-op, so cohort-less classes remain visible until the user explicitly asks for `"unassigned"`.
+- **Session-level filters (instructor, campus, delivery type, day) use `.some()`** over sessions — a class surfaces if any one of its sessions qualifies.
+- Search matches subject code or title, case-insensitively, on the trimmed query.
+- All predicates combine with **AND** in `matchesFilters`; `filterClasses(classes, filters)` is the array-level wrapper.
+
+### 14.5 Shared filter bar
+
+`src/components/ClassFilterBar.tsx` renders the controls and takes a `visible` prop listing which keys to show, so each screen exposes only the relevant subset (the calendar hides nothing; attendance shows course/cohort/subject). Cohort options come from `getCohortsForCourse(filters.courseId)` plus the fixed `All cohorts` and `Unassigned` entries. `FiltersEmptyState` is exported alongside it for the "no results" case.
+
+### 14.6 Screen behaviour
+
+| Screen | Applied to |
+|---|---|
+| **Calendar grid** | `filterClasses` runs before the sessions are flattened into blocks, so filtered-out classes vanish from the grid entirely; the legend stays fixed. |
+| **List table** | Rows filtered; Course and Cohort columns added; empty state with clear-filters CTA. |
+| **Attendance** | Students filtered by cohort/course; subject filter narrows visible columns; summary cards recomputed from the filtered set. |
+
+### 14.7 Deliberate exclusions
+
+- **Course/cohort admin CRUD screens** are out of scope; both lists remain static reference data.
+- **Course is not made mandatory** on the creation form — that would break the existing quick-publish flow.
+- **Session-level cohorts** are deferred; class-level assignment is the interim model.
+- Filter state is not encoded in the URL, so filtered views are not yet shareable.
+
+### 14.8 Seed data coverage
+
+The six seeded classes deliberately exercise every branch: a single-cohort class, a two-cohort class, a class with a course but cohorts from that course, a class with cohorts spanning two courses, a class tagged by cohort only (no `courseId`, to exercise transitive course matching), and one class with `cohortIds: []` (to exercise the `unassigned` filter).
