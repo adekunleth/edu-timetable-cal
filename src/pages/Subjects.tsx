@@ -20,14 +20,24 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { CAMPUSES, INSTRUCTORS, COHORTS } from "@/constants/dropdownOptions";
+import {
+  CAMPUSES,
+  INSTRUCTORS,
+  COURSES,
+  SUBJECTS,
+  getSubjectsForCourse,
+  getCohortsForCourse,
+  getCohortLabel,
+} from "@/constants/dropdownOptions";
 
-interface Subject {
+interface SubjectOffering {
+  id: string;
+  courseId: string;
   code: string;
   name: string;
   semester: string;
   campus: string;
-  cohort: string;
+  cohortId: string;
   instructor: string;
   type: string;
   credits: number;
@@ -37,35 +47,39 @@ interface Subject {
 const SEMESTERS = ["Semester 1", "Semester 2"];
 const TYPES = ["Lecture", "Lab", "Tutorial", "Workshop", "Online"];
 
-const INITIAL_SUBJECTS: Subject[] = [
-  { code: "BIO101", name: "Anatomy Basics", semester: "Semester 1", campus: "Sydney Campus", cohort: "Nursing 2025", instructor: "Dr. Nguyen", type: "Lecture", credits: 4, students: 45 },
-  { code: "CHEM202", name: "Organic Chemistry", semester: "Semester 1", campus: "Sydney Campus", cohort: "Science 2024", instructor: "Prof. Smith", type: "Lab", credits: 3, students: 32 },
-  { code: "MATH301", name: "Advanced Calculus", semester: "Semester 1", campus: "Melbourne Campus", cohort: "Engineering 2023", instructor: "Ms. Johnson", type: "Tutorial", credits: 4, students: 28 },
-  { code: "PHYS202", name: "Quantum Physics", semester: "Semester 1", campus: "Sydney Campus", cohort: "Physics 2024", instructor: "Dr. Williams", type: "Lecture", credits: 4, students: 38 },
-  { code: "CS401", name: "AI Workshop", semester: "Semester 1", campus: "Melbourne Campus", cohort: "Computer Science 2023", instructor: "Prof. Chen", type: "Workshop", credits: 3, students: 25 },
+const INITIAL_SUBJECTS: SubjectOffering[] = [
+  { id: "o1", courseId: "BSC-BIO", code: "BIO101", name: "Anatomy Basics", semester: "Semester 1", campus: "Sydney Campus", cohortId: "2025-S1-BIO", instructor: "Dr. Sarah Nguyen", type: "Lecture", credits: 4, students: 45 },
+  { id: "o2", courseId: "BSC-BIO", code: "CHEM202", name: "Organic Chemistry", semester: "Semester 1", campus: "Sydney Campus", cohortId: "2025-S2-BIO", instructor: "Dr. Maria Garcia", type: "Lab", credits: 3, students: 32 },
+  { id: "o3", courseId: "BENG-MEC", code: "MATH301", name: "Advanced Calculus", semester: "Semester 1", campus: "Melbourne Campus", cohortId: "INTL-A", instructor: "Dr. Emily Johnson", type: "Tutorial", credits: 4, students: 28 },
+  { id: "o4", courseId: "BSC-BIO", code: "PHYS202", name: "Quantum Physics", semester: "Semester 1", campus: "Sydney Campus", cohortId: "2025-S1-BIO", instructor: "Dr. James Wilson", type: "Lecture", credits: 4, students: 38 },
+  { id: "o5", courseId: "BIT-CS", code: "CS101", name: "Introduction to Programming", semester: "Semester 1", campus: "Melbourne Campus", cohortId: "2024-S2-CS", instructor: "Prof. Michael Chen", type: "Workshop", credits: 3, students: 25 },
 ];
 
-const emptyForm: Subject = {
+const blankForm = {
+  id: "",
+  courseId: "",
   code: "",
-  name: "",
   semester: "Semester 1",
   campus: CAMPUSES[0],
-  cohort: COHORTS[0].label,
+  cohortId: "",
   instructor: INSTRUCTORS[0],
   type: "Lecture",
   credits: 3,
   students: 0,
 };
 
+type FormState = typeof blankForm;
+
 export default function Subjects() {
+  const [course, setCourse] = useState("all");
   const [semester, setSemester] = useState("all");
   const [campus, setCampus] = useState("all");
   const [type, setType] = useState("all");
-  const [subjects, setSubjects] = useState<Subject[]>(INITIAL_SUBJECTS);
+  const [subjects, setSubjects] = useState<SubjectOffering[]>(INITIAL_SUBJECTS);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCode, setEditingCode] = useState<string | null>(null);
-  const [form, setForm] = useState<Subject>(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<FormState>(blankForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const typeColors: Record<string, string> = {
@@ -78,84 +92,112 @@ export default function Subjects() {
 
   const unique = (key: "semester" | "campus" | "type") =>
     Array.from(new Set(subjects.map((s) => s[key])));
-  const semesterOptions = unique("semester");
-  const campusOptions = unique("campus");
-  const typeOptions = unique("type");
 
   const filteredSubjects = useMemo(
     () =>
       subjects.filter(
         (s) =>
+          (course === "all" || s.courseId === course) &&
           (semester === "all" || s.semester === semester) &&
           (campus === "all" || s.campus === campus) &&
           (type === "all" || s.type === type)
       ),
-    [subjects, semester, campus, type]
+    [subjects, course, semester, campus, type]
   );
 
-  const activeCount = [semester, campus, type].filter((v) => v !== "all").length;
+  const activeCount = [course, semester, campus, type].filter((v) => v !== "all").length;
   const clearFilters = () => {
+    setCourse("all");
     setSemester("all");
     setCampus("all");
     setType("all");
   };
 
   const openAdd = () => {
-    setEditingCode(null);
-    setForm(emptyForm);
+    setEditingId(null);
+    setForm(blankForm);
     setErrors({});
     setDialogOpen(true);
   };
 
-  const openEdit = (subject: Subject) => {
-    setEditingCode(subject.code);
-    setForm(subject);
+  const openEdit = (offering: SubjectOffering) => {
+    setEditingId(offering.id);
+    setForm({ ...offering });
     setErrors({});
     setDialogOpen(true);
   };
 
-  const setField = <K extends keyof Subject>(key: K, value: Subject[K]) =>
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  /** Changing programme clears subject + cohort selections that no longer belong to it. */
+  const handleCourseChange = (courseId: string) => {
+    setForm((prev) => {
+      const subjectStillValid = getSubjectsForCourse(courseId).some((s) => s.code === prev.code);
+      const cohortStillValid = getCohortsForCourse(courseId).some((c) => c.id === prev.cohortId);
+      return {
+        ...prev,
+        courseId,
+        code: subjectStillValid ? prev.code : "",
+        cohortId: cohortStillValid ? prev.cohortId : "",
+      };
+    });
+  };
+
+  const availableSubjects = getSubjectsForCourse(form.courseId);
+  const availableCohorts = getCohortsForCourse(form.courseId);
 
   const handleSave = () => {
     const next: Record<string, string> = {};
-    if (!form.code.trim()) next.code = "Subject code is required";
-    else if (
-      subjects.some(
-        (s) => s.code.toLowerCase() === form.code.trim().toLowerCase() && s.code !== editingCode
-      )
-    )
-      next.code = "A subject with this code already exists";
-    if (!form.name.trim()) next.name = "Subject name is required";
+    if (!form.courseId) next.courseId = "Select a course / programme";
+    if (!form.code) next.code = "Select a subject";
+    if (!form.cohortId) next.cohortId = "Select a cohort / intake";
     if (form.credits <= 0) next.credits = "Credits must be greater than 0";
     if (form.students < 0) next.students = "Students cannot be negative";
+    if (
+      form.code &&
+      subjects.some(
+        (s) =>
+          s.id !== editingId &&
+          s.code === form.code &&
+          s.cohortId === form.cohortId &&
+          s.semester === form.semester
+      )
+    ) {
+      next.code = "This subject is already allocated to that cohort and semester";
+    }
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    const saved: Subject = { ...form, code: form.code.trim().toUpperCase(), name: form.name.trim() };
+    const catalog = SUBJECTS.find((s) => s.code === form.code);
+    const saved: SubjectOffering = {
+      ...form,
+      id: editingId ?? `o${Date.now()}`,
+      name: catalog?.title ?? form.code,
+    };
 
-    if (editingCode) {
-      setSubjects((prev) => prev.map((s) => (s.code === editingCode ? saved : s)));
-      toast({ title: "Subject updated", description: `${saved.code} — ${saved.name}` });
+    if (editingId) {
+      setSubjects((prev) => prev.map((s) => (s.id === editingId ? saved : s)));
+      toast({ title: "Allocation updated", description: `${saved.code} — ${saved.name}` });
     } else {
       setSubjects((prev) => [...prev, saved]);
-      toast({ title: "Subject added", description: `${saved.code} — ${saved.name}` });
+      toast({ title: "Subject allocated", description: `${saved.code} — ${saved.name}` });
     }
     setDialogOpen(false);
   };
 
-  const handleDelete = (subject: Subject) => {
-    setSubjects((prev) => prev.filter((s) => s.code !== subject.code));
-    toast({ title: "Subject removed", description: `${subject.code} was deleted` });
+  const handleDelete = (offering: SubjectOffering) => {
+    setSubjects((prev) => prev.filter((s) => s.id !== offering.id));
+    toast({ title: "Allocation removed", description: `${offering.code} was deleted` });
   };
+
+  const courseCode = (id: string) => COURSES.find((c) => c.id === id)?.code ?? id;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">
-            Subjects & Units
-          </h2>
+          <h2 className="text-3xl font-bold text-foreground">Subjects & Units</h2>
           <p className="text-muted-foreground">
             Manage subjects, allocations, and delivery modes
           </p>
@@ -169,13 +211,24 @@ export default function Subjects() {
       {/* Filters */}
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 p-4">
+          <Select value={course} onValueChange={setCourse}>
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Course / Programme" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Courses</SelectItem>
+              {COURSES.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={semester} onValueChange={setSemester}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Semester" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Semesters</SelectItem>
-              {semesterOptions.map((o) => (
+              {unique("semester").map((o) => (
                 <SelectItem key={o} value={o}>{o}</SelectItem>
               ))}
             </SelectContent>
@@ -186,7 +239,7 @@ export default function Subjects() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Campuses</SelectItem>
-              {campusOptions.map((o) => (
+              {unique("campus").map((o) => (
                 <SelectItem key={o} value={o}>{o}</SelectItem>
               ))}
             </SelectContent>
@@ -197,7 +250,7 @@ export default function Subjects() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
-              {typeOptions.map((o) => (
+              {unique("type").map((o) => (
                 <SelectItem key={o} value={o}>{o}</SelectItem>
               ))}
             </SelectContent>
@@ -224,7 +277,7 @@ export default function Subjects() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  {["Code", "Subject Name", "Type", "Instructor", "Campus", "Cohort", "Students", "Credits", "Actions"].map((h) => (
+                  {["Code", "Subject Name", "Course", "Type", "Instructor", "Campus", "Cohort", "Students", "Credits", "Actions"].map((h) => (
                     <th key={h} className="p-3 text-left text-sm font-medium text-muted-foreground">
                       {h}
                     </th>
@@ -233,16 +286,10 @@ export default function Subjects() {
               </thead>
               <tbody>
                 {filteredSubjects.map((subject) => (
-                  <tr
-                    key={subject.code}
-                    className="border-b border-border hover:bg-muted/50"
-                  >
-                    <td className="p-3 text-sm font-medium text-foreground">
-                      {subject.code}
-                    </td>
-                    <td className="p-3 text-sm text-foreground">
-                      {subject.name}
-                    </td>
+                  <tr key={subject.id} className="border-b border-border hover:bg-muted/50">
+                    <td className="p-3 text-sm font-medium text-foreground">{subject.code}</td>
+                    <td className="p-3 text-sm text-foreground">{subject.name}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{courseCode(subject.courseId)}</td>
                     <td className="p-3">
                       <span
                         className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
@@ -252,21 +299,11 @@ export default function Subjects() {
                         {subject.type}
                       </span>
                     </td>
-                    <td className="p-3 text-sm text-muted-foreground">
-                      {subject.instructor}
-                    </td>
-                    <td className="p-3 text-sm text-muted-foreground">
-                      {subject.campus}
-                    </td>
-                    <td className="p-3 text-sm text-muted-foreground">
-                      {subject.cohort}
-                    </td>
-                    <td className="p-3 text-sm text-muted-foreground">
-                      {subject.students}
-                    </td>
-                    <td className="p-3 text-sm text-muted-foreground">
-                      {subject.credits}
-                    </td>
+                    <td className="p-3 text-sm text-muted-foreground">{subject.instructor}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{subject.campus}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{getCohortLabel(subject.cohortId)}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{subject.students}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{subject.credits}</td>
                     <td className="p-3">
                       <div className="flex gap-2">
                         <Button variant="ghost" size="icon" onClick={() => openEdit(subject)} aria-label={`Edit ${subject.code}`}>
@@ -291,37 +328,76 @@ export default function Subjects() {
         </CardContent>
       </Card>
 
-      {/* Add / Edit Subject dialog */}
+      {/* Add / Edit allocation dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingCode ? "Edit Subject" : "Add Subject"}</DialogTitle>
+            <DialogTitle>{editingId ? "Edit Subject Allocation" : "Add Subject"}</DialogTitle>
             <DialogDescription>
-              Define the subject details, allocation and delivery mode.
+              Pick a subject from the course catalogue, then set the delivery details.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="subject-code">Subject Code *</Label>
-              <Input
-                id="subject-code"
+              <Label>Course / Programme *</Label>
+              <Select value={form.courseId} onValueChange={handleCourseChange}>
+                <SelectTrigger><SelectValue placeholder="Select a course" /></SelectTrigger>
+                <SelectContent>
+                  {COURSES.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.courseId && <p className="text-xs text-destructive">{errors.courseId}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Subject *</Label>
+              <Select
                 value={form.code}
-                onChange={(e) => setField("code", e.target.value)}
-                placeholder="e.g. BIO102"
-              />
+                onValueChange={(v) => setField("code", v)}
+                disabled={!form.courseId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={form.courseId ? "Select a subject" : "Select a course first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSubjects.map((s) => (
+                    <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               {errors.code && <p className="text-xs text-destructive">{errors.code}</p>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="subject-name">Subject Name *</Label>
-              <Input
-                id="subject-name"
-                value={form.name}
-                onChange={(e) => setField("name", e.target.value)}
-                placeholder="e.g. Human Physiology"
-              />
-              {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+              <Label>Cohort / Intake *</Label>
+              <Select
+                value={form.cohortId}
+                onValueChange={(v) => setField("cohortId", v)}
+                disabled={!form.courseId}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={form.courseId ? "Select a cohort" : "Select a course first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCohorts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.cohortId && <p className="text-xs text-destructive">{errors.cohortId}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Instructor</Label>
+              <Select value={form.instructor} onValueChange={(v) => setField("instructor", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {INSTRUCTORS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -345,33 +421,11 @@ export default function Subjects() {
             </div>
 
             <div className="space-y-2">
-              <Label>Instructor</Label>
-              <Select value={form.instructor} onValueChange={(v) => setField("instructor", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {INSTRUCTORS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label>Campus</Label>
               <Select value={form.campus} onValueChange={(v) => setField("campus", v)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {CAMPUSES.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Cohort / Intake</Label>
-              <Select value={form.cohort} onValueChange={(v) => setField("cohort", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Array.from(new Set([...COHORTS.map((c) => c.label), ...subjects.map((s) => s.cohort)])).map((o) => (
-                    <SelectItem key={o} value={o}>{o}</SelectItem>
-                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -404,7 +458,7 @@ export default function Subjects() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingCode ? "Save Changes" : "Add Subject"}</Button>
+            <Button onClick={handleSave}>{editingId ? "Save Changes" : "Add Subject"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
