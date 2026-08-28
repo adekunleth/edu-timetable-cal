@@ -12,10 +12,8 @@ export interface ClassSession {
   // Delivery
   deliveryType: DeliveryType;
   deliveryMethod: DeliveryMethod;
-  campus?: string;
-  building?: string;
-  room?: string;
-  roomCapacity?: number;
+  /** FK -> ROOMS.id. Campus / building / room / capacity are derived from this. */
+  roomId?: string;
   onlineLink?: string;
   
   // Attendance
