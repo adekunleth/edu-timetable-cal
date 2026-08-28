@@ -9,7 +9,7 @@ import {
   StudentAttendanceDialog,
   StudentAttendanceTarget,
 } from "@/components/StudentAttendanceDialog";
-import { AttendanceStatus } from "@/utils/studentAttendance";
+import { AttendanceStatus, buildBreakdown } from "@/utils/studentAttendance";
 import { useRole, CURRENT_STUDENT } from "@/contexts/RoleContext";
 import {
   Select,
@@ -19,12 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type PeriodKey = "week" | "lastWeek" | "month";
+type PeriodKey = "week" | "lastWeek" | "month" | "semester";
 
 const PERIOD_LABELS: Record<PeriodKey, string> = {
   week: "This Week",
   lastWeek: "Last Week",
   month: "This Month",
+  semester: "This Semester",
 };
 
 /** Deterministic per-period variation so the period selector visibly changes data. */
@@ -174,11 +175,26 @@ export default function Attendance() {
 
   // Student-scoped metrics describe only the signed-in student's own record.
   const myRecord = isStudent ? filteredRecords[0] : undefined;
-  const mySubjectsBelow = myRecord
-    ? visibleColumns.filter((c) =>
-        ["absent"].includes((myRecord as Record<string, string>)[c.key])
-      ).length
-    : 0;
+
+  // Students see one row per subject (their own record broken down by subject)
+  // rather than a single wide row, so "All subjects" shows every subject.
+  const myBreakdown =
+    isStudent && myRecord
+      ? buildBreakdown(
+          myRecord.id,
+          visibleColumns.map((c) => ({
+            code: c.code,
+            currentStatus: (myRecord as Record<string, string>)[c.key] as AttendanceStatus,
+          })),
+          period === "semester" ? "semester" : "month"
+        )
+      : [];
+
+  const mySubjectsBelow = myBreakdown.filter((b) => b.rate < 80).length;
+  const myAverage = myBreakdown.length
+    ? `${Math.round(myBreakdown.reduce((a, b) => a + b.rate, 0) / myBreakdown.length)}%`
+    : "—";
+  const myLate = myBreakdown.reduce((a, b) => a + b.late, 0);
 
 
   return (
