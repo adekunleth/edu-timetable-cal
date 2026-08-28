@@ -289,7 +289,7 @@ export default function Attendance() {
       {/* Attendance Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Attendance Records</CardTitle>
+          <CardTitle>{isStudent ? "My Attendance Record" : "Attendance Records"}</CardTitle>
         </CardHeader>
         <CardContent>
           {!hasRows ? (
