@@ -106,10 +106,12 @@ export default function CalendarView() {
               </Button>
             </>
           )}
-          <Button className="ml-4" onClick={() => navigate("/calendar/add-class")}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Class
-          </Button>
+          {!isStudent && (
+            <Button className="ml-4" onClick={() => navigate("/calendar/add-class")}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Class
+            </Button>
+          )}
         </div>
       </div>
 
