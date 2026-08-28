@@ -206,15 +206,17 @@ export default function CalendarView() {
                               <div className="mt-1 text-xs opacity-75">
                                 {cls.room}
                               </div>
-                              <Button
-                                size="sm"
-                                variant="secondary"
-                                className="absolute bottom-2 right-2 h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => handleMarkAttendance(cls)}
-                              >
-                                <ClipboardCheck className="h-3 w-3 mr-1" />
-                                Mark
-                              </Button>
+                              {!isStudent && (
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  className="absolute bottom-2 right-2 h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => handleMarkAttendance(cls)}
+                                >
+                                  <ClipboardCheck className="h-3 w-3 mr-1" />
+                                  Mark
+                                </Button>
+                              )}
                             </div>
                           ))}
                       </div>
