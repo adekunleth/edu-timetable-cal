@@ -9,7 +9,7 @@ import {
   StudentAttendanceDialog,
   StudentAttendanceTarget,
 } from "@/components/StudentAttendanceDialog";
-import { AttendanceStatus } from "@/utils/studentAttendance";
+import { AttendanceStatus, buildBreakdown } from "@/utils/studentAttendance";
 import { useRole, CURRENT_STUDENT } from "@/contexts/RoleContext";
 import {
   Select,
@@ -19,12 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type PeriodKey = "week" | "lastWeek" | "month";
+type PeriodKey = "week" | "lastWeek" | "month" | "semester";
 
 const PERIOD_LABELS: Record<PeriodKey, string> = {
   week: "This Week",
   lastWeek: "Last Week",
   month: "This Month",
+  semester: "This Semester",
 };
 
 /** Deterministic per-period variation so the period selector visibly changes data. */
@@ -174,11 +175,26 @@ export default function Attendance() {
 
   // Student-scoped metrics describe only the signed-in student's own record.
   const myRecord = isStudent ? filteredRecords[0] : undefined;
-  const mySubjectsBelow = myRecord
-    ? visibleColumns.filter((c) =>
-        ["absent"].includes((myRecord as Record<string, string>)[c.key])
-      ).length
-    : 0;
+
+  // Students see one row per subject (their own record broken down by subject)
+  // rather than a single wide row, so "All subjects" shows every subject.
+  const myBreakdown =
+    isStudent && myRecord
+      ? buildBreakdown(
+          myRecord.id,
+          visibleColumns.map((c) => ({
+            code: c.code,
+            currentStatus: (myRecord as Record<string, string>)[c.key] as AttendanceStatus,
+          })),
+          period === "semester" ? "semester" : "month"
+        )
+      : [];
+
+  const mySubjectsBelow = myBreakdown.filter((b) => b.rate < 80).length;
+  const myAverage = myBreakdown.length
+    ? `${Math.round(myBreakdown.reduce((a, b) => a + b.rate, 0) / myBreakdown.length)}%`
+    : "—";
+  const myLate = myBreakdown.reduce((a, b) => a + b.late, 0);
 
 
   return (
@@ -206,7 +222,7 @@ export default function Attendance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-present">{averageAttendance}</div>
+            <div className="text-2xl font-bold text-present">{isStudent ? myAverage : averageAttendance}</div>
           </CardContent>
         </Card>
         <Card>
@@ -220,10 +236,10 @@ export default function Attendance() {
               <>
                 <div
                   className={`text-2xl font-bold ${
-                    belowThreshold === 0 ? "text-present" : "text-destructive"
+                    mySubjectsBelow === 0 ? "text-present" : "text-destructive"
                   }`}
                 >
-                  {belowThreshold === 0 ? "On Track" : "At Risk"}
+                  {mySubjectsBelow === 0 ? "On Track" : "At Risk"}
                 </div>
                 <p className="text-xs text-muted-foreground">80% threshold</p>
               </>
@@ -238,7 +254,7 @@ export default function Attendance() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {isStudent ? "Subjects Missed" : "Perfect Attendance"}
+              {isStudent ? "Subjects Below 80%" : "Perfect Attendance"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -246,7 +262,7 @@ export default function Attendance() {
               {isStudent ? mySubjectsBelow : perfectAttendance}
             </div>
             <p className="text-xs text-muted-foreground">
-              {isStudent ? "Absences this period" : "Students at 100%"}
+              {isStudent ? "Of your enrolled subjects" : "Students at 100%"}
             </p>
           </CardContent>
         </Card>
@@ -257,7 +273,7 @@ export default function Attendance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-late">{lateArrivals}</div>
+            <div className="text-2xl font-bold text-late">{isStudent ? myLate : lateArrivals}</div>
             <p className="text-xs text-muted-foreground">{PERIOD_LABELS[period]}</p>
           </CardContent>
         </Card>
@@ -294,6 +310,62 @@ export default function Attendance() {
         <CardContent>
           {!hasRows ? (
             <FiltersEmptyState />
+          ) : isStudent ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="p-3 text-left text-sm font-medium text-muted-foreground">Subject</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Sessions</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Present</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Late</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Excused</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Absent</th>
+                    <th className="p-3 text-left text-sm font-medium text-muted-foreground">Attendance Rate</th>
+                    <th className="p-3 text-right text-sm font-medium text-muted-foreground">Breakdown</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myBreakdown.map((b) => (
+                    <tr
+                      key={b.subject}
+                      onClick={() => myRecord && openBreakdown(myRecord)}
+                      className="cursor-pointer border-b border-border hover:bg-muted/50"
+                    >
+                      <td className="p-3 text-sm font-medium text-foreground">{b.subject}</td>
+                      <td className="p-3 text-center text-sm text-muted-foreground">{b.total}</td>
+                      <td className="p-3 text-center text-sm text-present">{b.present}</td>
+                      <td className="p-3 text-center text-sm text-late">{b.late}</td>
+                      <td className="p-3 text-center text-sm text-excused">{b.excused}</td>
+                      <td className="p-3 text-center text-sm text-absent">{b.absent}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={`h-full ${b.rate >= 80 ? "bg-present" : "bg-destructive"}`}
+                              style={{ width: `${b.rate}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-foreground">{b.rate}%</span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (myRecord) openBreakdown(myRecord);
+                          }}
+                        >
+                          View
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
