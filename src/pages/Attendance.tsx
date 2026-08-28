@@ -222,7 +222,7 @@ export default function Attendance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-present">{averageAttendance}</div>
+            <div className="text-2xl font-bold text-present">{isStudent ? myAverage : averageAttendance}</div>
           </CardContent>
         </Card>
         <Card>
@@ -236,10 +236,10 @@ export default function Attendance() {
               <>
                 <div
                   className={`text-2xl font-bold ${
-                    belowThreshold === 0 ? "text-present" : "text-destructive"
+                    mySubjectsBelow === 0 ? "text-present" : "text-destructive"
                   }`}
                 >
-                  {belowThreshold === 0 ? "On Track" : "At Risk"}
+                  {mySubjectsBelow === 0 ? "On Track" : "At Risk"}
                 </div>
                 <p className="text-xs text-muted-foreground">80% threshold</p>
               </>
@@ -254,7 +254,7 @@ export default function Attendance() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {isStudent ? "Subjects Missed" : "Perfect Attendance"}
+              {isStudent ? "Subjects Below 80%" : "Perfect Attendance"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -262,7 +262,7 @@ export default function Attendance() {
               {isStudent ? mySubjectsBelow : perfectAttendance}
             </div>
             <p className="text-xs text-muted-foreground">
-              {isStudent ? "Absences this period" : "Students at 100%"}
+              {isStudent ? "Of your enrolled subjects" : "Students at 100%"}
             </p>
           </CardContent>
         </Card>
@@ -273,7 +273,7 @@ export default function Attendance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-late">{lateArrivals}</div>
+            <div className="text-2xl font-bold text-late">{isStudent ? myLate : lateArrivals}</div>
             <p className="text-xs text-muted-foreground">{PERIOD_LABELS[period]}</p>
           </CardContent>
         </Card>
