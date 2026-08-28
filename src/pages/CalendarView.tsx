@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { getLocationLabel } from "@/constants/locations";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus, ClipboardCheck, CalendarDays, List } from "lucide-react";
 import { useState } from "react";
@@ -63,7 +64,7 @@ export default function CalendarView() {
         subject: cls.subject,
         title: cls.title,
         type: session.deliveryType,
-        room: session.deliveryMethod === "Online" ? "Online" : session.room || "",
+        room: session.deliveryMethod === "Online" ? "Online" : getLocationLabel(session.roomId) ?? "",
         color: cls.color,
         classId: cls.id,
       };

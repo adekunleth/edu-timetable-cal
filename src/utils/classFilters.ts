@@ -1,5 +1,6 @@
 import { ClassSchedule } from "@/types/classForm";
 import { COHORTS } from "@/constants/dropdownOptions";
+import { getCampusNameForRoom } from "@/constants/locations";
 import { ClassFilters } from "@/contexts/FiltersContext";
 
 const cohortCourseId = (cohortId: string): string | undefined =>
@@ -37,7 +38,7 @@ export function matchesFilters(cls: ClassSchedule, filters: ClassFilters): boole
     cls.sessions.some((s) => s.instructor === filters.instructor);
   const matchesCampus =
     filters.campus === "all" ||
-    cls.sessions.some((s) => s.campus === filters.campus);
+    cls.sessions.some((s) => getCampusNameForRoom(s.roomId) === filters.campus);
   const matchesDelivery =
     filters.deliveryType === "all" ||
     cls.sessions.some((s) => s.deliveryType === filters.deliveryType);
