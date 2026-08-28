@@ -21,7 +21,7 @@ export default function Dashboard() {
     setAttendanceDialogOpen(true);
   };
 
-  const stats = [
+  const adminStats = [
     {
       title: "Active Subjects",
       value: "24",
@@ -47,6 +47,18 @@ export default function Dashboard() {
       color: "text-workshop",
     },
   ];
+
+  // Students only see figures about their own enrolment — no cohort-wide or
+  // institution-wide counts.
+  const studentStats = [
+    { title: "My Subjects", value: "6", icon: BookOpen, color: "text-lecture" },
+    { title: "My Classes This Week", value: "11", icon: Calendar, color: "text-accent" },
+    { title: "My Attendance Rate", value: "92%", icon: AlertCircle, color: "text-workshop" },
+    { title: "Classes Today", value: "3", icon: Users, color: "text-tutorial" },
+  ];
+
+  const stats = isStudent ? studentStats : adminStats;
+
 
   const upcomingClasses = [
     {
