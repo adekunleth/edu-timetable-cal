@@ -10,6 +10,7 @@ import {
   StudentAttendanceTarget,
 } from "@/components/StudentAttendanceDialog";
 import { AttendanceStatus } from "@/utils/studentAttendance";
+import { useRole, CURRENT_STUDENT } from "@/contexts/RoleContext";
 import {
   Select,
   SelectContent,
