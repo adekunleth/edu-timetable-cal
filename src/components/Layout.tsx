@@ -22,20 +22,13 @@ interface LayoutProps {
   children: ReactNode;
 }
 
-type Role = "admin" | "teacher" | "student";
-
-const ROLE_LABELS: Record<Role, string> = {
-  admin: "Administrator",
-  teacher: "Teacher",
-  student: "Student",
-};
-
 // Each role only sees the sections it can act on.
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["admin", "teacher", "student"] },
   { name: "Calendar", href: "/calendar", icon: Calendar, roles: ["admin", "teacher", "student"] },
   { name: "Subjects", href: "/subjects", icon: BookOpen, roles: ["admin", "teacher"] },
-  { name: "Attendance", href: "/attendance", icon: ClipboardList, roles: ["admin", "teacher", "student"] },
+  { name: "My Attendance", href: "/attendance", icon: ClipboardList, roles: ["student"] },
+  { name: "Attendance", href: "/attendance", icon: ClipboardList, roles: ["admin", "teacher"] },
   { name: "Cohorts", href: "/cohorts", icon: Users, roles: ["admin", "teacher"] },
   { name: "Reports", href: "/reports", icon: BarChart3, roles: ["admin"] },
   { name: "Settings", href: "/settings", icon: Settings, roles: ["admin"] },
@@ -43,7 +36,8 @@ const navigation = [
 
 export function Layout({ children }: LayoutProps) {
   const location = useLocation();
-  const [role, setRole] = useState<Role>("admin");
+  const { role, setRole } = useRole();
+
 
   const visibleNav = navigation.filter((item) =>
     (item.roles as readonly string[]).includes(role)
