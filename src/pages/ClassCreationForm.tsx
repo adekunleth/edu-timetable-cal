@@ -17,7 +17,13 @@ import { useClasses } from "@/contexts/ClassesContext";
 import { ClassSchedule, ClassSession, DeliveryType, DeliveryMethod } from "@/types/classForm";
 import { ChevronLeft, Save, Upload, Plus, Trash2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { SUBJECTS, INSTRUCTORS, CAMPUSES, BUILDINGS_ROOMS, STUDY_PERIODS, COHORTS, COURSES, getCohortsForCourse } from "@/constants/dropdownOptions";
+import { SUBJECTS, INSTRUCTORS, STUDY_PERIODS, COHORTS, COURSES, getCohortsForCourse } from "@/constants/dropdownOptions";
+import {
+  CAMPUSES_MASTER,
+  getRoomsForVenue,
+  getVenuesForCampus,
+  resolveLocation,
+} from "@/constants/locations";
 import { CohortMultiSelect } from "@/components/CohortMultiSelect";
 import { generateWeeksForPeriod, calculateNumberOfWeeks } from "@/utils/weekGenerator";
 
@@ -76,6 +82,27 @@ export default function ClassCreationForm() {
     },
   ]);
 
+  // Cascading campus -> venue -> room selection (derived from roomId when present)
+  const [locSel, setLocSel] = useState<Record<string, { campusId: string; venueId: string }>>({});
+
+  const locationSelection = (session: ClassSession) => {
+    const resolved = resolveLocation(session.roomId);
+    if (resolved) return { campusId: resolved.campus.id, venueId: resolved.venue.id };
+    return locSel[session.id] ?? { campusId: "", venueId: "" };
+  };
+
+  const setLocationSelection = (
+    sessionId: string,
+    updates: Partial<{ campusId: string; venueId: string }>
+  ) => {
+    setLocSel((prev) => {
+      const current = prev[sessionId] ?? { campusId: "", venueId: "" };
+      return { ...prev, [sessionId]: { ...current, ...updates } };
+    });
+    // Changing campus or venue invalidates the selected room
+    updateSession(sessionId, { roomId: undefined });
+  };
+
   // Additional Info
   const [description, setDescription] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
@@ -104,8 +131,8 @@ export default function ClassCreationForm() {
     return classes.some(cls => 
       cls.sessions.some(session => 
         session.day === sessionToCheck.day &&
-        session.building === sessionToCheck.building &&
-        session.room === sessionToCheck.room &&
+        !!sessionToCheck.roomId &&
+        session.roomId === sessionToCheck.roomId &&
         timeRangesOverlap(session.startTime, session.endTime, sessionToCheck.startTime, sessionToCheck.endTime)
       )
     );
@@ -590,54 +617,77 @@ export default function ClassCreationForm() {
                   {session.deliveryMethod === "On-Campus" && (
                     <div className="border-t pt-4">
                       <h4 className="mb-3 text-sm font-semibold">Location Details</h4>
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                         <div className="space-y-2">
                           <Label>Campus</Label>
                           <Select
-                            value={session.campus || ""}
+                            value={locationSelection(session).campusId}
                             onValueChange={(value) =>
-                              updateSession(session.id, { campus: value })
+                              setLocationSelection(session.id, { campusId: value, venueId: "" })
                             }
                           >
                             <SelectTrigger>
                               <SelectValue placeholder="Select campus" />
                             </SelectTrigger>
                             <SelectContent>
-                              {CAMPUSES.map((campus) => (
-                                <SelectItem key={campus} value={campus}>
-                                  {campus}
+                              {CAMPUSES_MASTER.filter((c) => c.isActive).map((campus) => (
+                                <SelectItem key={campus.id} value={campus.id}>
+                                  {campus.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Building / Room</Label>
+                          <Label>Venue</Label>
                           <Select
-                            value={session.building && session.room ? `Building ${session.building} - Room ${session.room}` : ""}
-                            onValueChange={(value) => {
-                              const [building, room] = value.split(' - Room ');
-                              updateSession(session.id, { 
-                                building: building.replace('Building ', ''),
-                                room: room 
-                              });
-                            }}
+                            value={locationSelection(session).venueId}
+                            onValueChange={(value) =>
+                              setLocationSelection(session.id, { venueId: value })
+                            }
+                            disabled={!locationSelection(session).campusId}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select building and room" />
+                              <SelectValue placeholder="Select venue" />
                             </SelectTrigger>
                             <SelectContent>
-                              {BUILDINGS_ROOMS.map((br) => (
-                                <SelectItem key={br} value={br}>
-                                  {br}
+                              {getVenuesForCampus(locationSelection(session).campusId).map((venue) => (
+                                <SelectItem key={venue.id} value={venue.id}>
+                                  {venue.name} — {venue.street}, {venue.suburb} {venue.state} {venue.postcode}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
-                          {session.building && session.room && detectRoomConflict(session) && (
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Room</Label>
+                          <Select
+                            value={session.roomId || ""}
+                            onValueChange={(value) => updateSession(session.id, { roomId: value })}
+                            disabled={!locationSelection(session).venueId}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select room" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {getRoomsForVenue(locationSelection(session).venueId).map((room) => (
+                                <SelectItem key={room.id} value={room.id}>
+                                  {room.name} ({room.type}, cap. {room.capacity})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {session.roomId && (
+                            <p className="text-xs text-muted-foreground">
+                              {resolveLocation(session.roomId)?.campus.name} ·{" "}
+                              {resolveLocation(session.roomId)?.label} · Capacity{" "}
+                              {resolveLocation(session.roomId)?.capacity}
+                            </p>
+                          )}
+                          {session.roomId && detectRoomConflict(session) && (
                             <div className="flex items-center gap-2 text-sm text-amber-600">
                               <AlertCircle className="h-4 w-4" />
-                              <span>⚠️ Room conflict: This room is already booked for this time</span>
+                              <span>Room conflict: this room is already booked for this time</span>
                             </div>
                           )}
                         </div>
