@@ -183,14 +183,16 @@ export default function Dashboard() {
                     <span className="rounded-full px-3 py-1 text-xs font-medium">
                       {cls.type}
                     </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleMarkAttendance(cls)}
-                    >
-                      <ClipboardCheck className="h-4 w-4 mr-2" />
-                      Mark Attendance
-                    </Button>
+                    {!isStudent && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleMarkAttendance(cls)}
+                      >
+                        <ClipboardCheck className="h-4 w-4 mr-2" />
+                        Mark Attendance
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
