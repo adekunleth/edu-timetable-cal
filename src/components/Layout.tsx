@@ -45,9 +45,12 @@ export function Layout({ children }: LayoutProps) {
   );
 
   // Switching to a narrower role while on a restricted page sends you home.
+  // Class creation is staff-only, so students are redirected off it.
   const currentAllowed =
-    location.pathname.startsWith("/calendar") ||
-    visibleNav.some((item) => item.href === location.pathname);
+    location.pathname === "/calendar/add-class"
+      ? role !== "student"
+      : location.pathname.startsWith("/calendar") ||
+        visibleNav.some((item) => item.href === location.pathname);
 
   return (
     <div className="flex min-h-screen w-full bg-background">
