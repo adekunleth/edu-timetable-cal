@@ -93,6 +93,7 @@ const SUBJECT_COLUMNS = [
 
 export default function Attendance() {
   const { filters } = useFilters();
+  const { isStudent } = useRole();
   const [period, setPeriod] = useState<PeriodKey>("week");
   const [selected, setSelected] = useState<StudentAttendanceTarget | null>(null);
 
