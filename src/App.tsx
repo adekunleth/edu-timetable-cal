@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ClassesProvider } from "./contexts/ClassesContext";
 import { FiltersProvider } from "./contexts/FiltersContext";
+import { RoleProvider } from "./contexts/RoleContext";
 import Dashboard from "./pages/Dashboard";
 import CalendarView from "./pages/CalendarView";
 import ClassCreationForm from "./pages/ClassCreationForm";
@@ -21,6 +22,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
+      <RoleProvider>
       <ClassesProvider>
         <FiltersProvider>
         <Toaster />
@@ -42,6 +44,7 @@ const App = () => (
         </BrowserRouter>
         </FiltersProvider>
       </ClassesProvider>
+      </RoleProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

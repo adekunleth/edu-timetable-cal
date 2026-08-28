@@ -10,6 +10,7 @@ import {
   StudentAttendanceTarget,
 } from "@/components/StudentAttendanceDialog";
 import { AttendanceStatus } from "@/utils/studentAttendance";
+import { useRole, CURRENT_STUDENT } from "@/contexts/RoleContext";
 import {
   Select,
   SelectContent,
@@ -92,6 +93,7 @@ const SUBJECT_COLUMNS = [
 
 export default function Attendance() {
   const { filters } = useFilters();
+  const { isStudent } = useRole();
   const [period, setPeriod] = useState<PeriodKey>("week");
   const [selected, setSelected] = useState<StudentAttendanceTarget | null>(null);
 
@@ -139,6 +141,8 @@ export default function Attendance() {
     COHORTS.find((c) => c.id === cohortId)?.courseId;
 
   const filteredRecords = periodRecords.filter((r) => {
+    // Privacy: a student may only ever see their own attendance record.
+    if (isStudent) return r.id === CURRENT_STUDENT.id;
     const matchesCourse =
       filters.courseId === "all" || cohortCourse(r.cohortId) === filters.courseId;
     const matchesCohort =
@@ -168,18 +172,29 @@ export default function Attendance() {
       )
     : "—";
 
+  // Student-scoped metrics describe only the signed-in student's own record.
+  const myRecord = isStudent ? filteredRecords[0] : undefined;
+  const mySubjectsBelow = myRecord
+    ? visibleColumns.filter((c) =>
+        ["absent"].includes((myRecord as Record<string, string>)[c.key])
+      ).length
+    : 0;
+
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-foreground">
-            Attendance Tracking
+            {isStudent ? "My Attendance" : "Attendance Tracking"}
           </h2>
           <p className="text-muted-foreground">
-            Monitor and manage student attendance · {PERIOD_LABELS[period]}
+            {isStudent
+              ? `${CURRENT_STUDENT.name} · ${CURRENT_STUDENT.id} · ${PERIOD_LABELS[period]}`
+              : `Monitor and manage student attendance · ${PERIOD_LABELS[period]}`}
           </p>
         </div>
-        <Button>Export Report</Button>
+        {!isStudent && <Button>Export Report</Button>}
       </div>
 
       {/* Summary Cards */}
@@ -187,7 +202,7 @@ export default function Attendance() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Average Attendance
+              {isStudent ? "My Attendance Rate" : "Average Attendance"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -197,29 +212,48 @@ export default function Attendance() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Below Threshold
+              {isStudent ? "Attendance Status" : "Below Threshold"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{belowThreshold}</div>
-            <p className="text-xs text-muted-foreground">Students &lt; 80%</p>
+            {isStudent ? (
+              <>
+                <div
+                  className={`text-2xl font-bold ${
+                    belowThreshold === 0 ? "text-present" : "text-destructive"
+                  }`}
+                >
+                  {belowThreshold === 0 ? "On Track" : "At Risk"}
+                </div>
+                <p className="text-xs text-muted-foreground">80% threshold</p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-destructive">{belowThreshold}</div>
+                <p className="text-xs text-muted-foreground">Students &lt; 80%</p>
+              </>
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Perfect Attendance
+              {isStudent ? "Subjects Missed" : "Perfect Attendance"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{perfectAttendance}</div>
-            <p className="text-xs text-muted-foreground">Students at 100%</p>
+            <div className="text-2xl font-bold text-foreground">
+              {isStudent ? mySubjectsBelow : perfectAttendance}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isStudent ? "Absences this period" : "Students at 100%"}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Late Arrivals
+              {isStudent ? "My Late Arrivals" : "Late Arrivals"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -233,9 +267,10 @@ export default function Attendance() {
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 p-4">
           <ClassFilterBar
-            visible={["courseId", "cohortId", "subject"]}
+            visible={isStudent ? ["subject"] : ["courseId", "cohortId", "subject"]}
             className="flex-1"
           />
+
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
@@ -254,7 +289,7 @@ export default function Attendance() {
       {/* Attendance Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Attendance Records</CardTitle>
+          <CardTitle>{isStudent ? "My Attendance Record" : "Attendance Records"}</CardTitle>
         </CardHeader>
         <CardContent>
           {!hasRows ? (

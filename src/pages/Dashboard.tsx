@@ -3,8 +3,10 @@ import { Calendar, Users, BookOpen, AlertCircle, ClipboardCheck } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AttendanceMarkingDialog } from "@/components/AttendanceMarkingDialog";
+import { useRole, CURRENT_STUDENT } from "@/contexts/RoleContext";
 
 export default function Dashboard() {
+  const { isStudent } = useRole();
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<any>(null);
 
@@ -19,7 +21,7 @@ export default function Dashboard() {
     setAttendanceDialogOpen(true);
   };
 
-  const stats = [
+  const adminStats = [
     {
       title: "Active Subjects",
       value: "24",
@@ -45,6 +47,18 @@ export default function Dashboard() {
       color: "text-workshop",
     },
   ];
+
+  // Students only see figures about their own enrolment — no cohort-wide or
+  // institution-wide counts.
+  const studentStats = [
+    { title: "My Subjects", value: "6", icon: BookOpen, color: "text-lecture" },
+    { title: "My Classes This Week", value: "11", icon: Calendar, color: "text-accent" },
+    { title: "My Attendance Rate", value: "92%", icon: AlertCircle, color: "text-workshop" },
+    { title: "Classes Today", value: "3", icon: Users, color: "text-tutorial" },
+  ];
+
+  const stats = isStudent ? studentStats : adminStats;
+
 
   const upcomingClasses = [
     {
@@ -73,7 +87,7 @@ export default function Dashboard() {
     },
   ];
 
-  const recentAlerts = [
+  const adminAlerts = [
     {
       message: "Room conflict detected for BIO101 on Thursday 3:00 PM",
       severity: "high",
@@ -88,13 +102,35 @@ export default function Dashboard() {
     },
   ];
 
+  // Student notices are personal — never operational alerts about other people.
+  const studentAlerts = [
+    {
+      message: "Your PHYS202 attendance is 78% — below the 80% threshold",
+      severity: "medium",
+    },
+    {
+      message: "CHEM202 Lab moved to Science Lab 3 this week",
+      severity: "low",
+    },
+    {
+      message: "Holiday scheduled: Mid-semester break starts March 15",
+      severity: "low",
+    },
+  ];
+
+  const recentAlerts = isStudent ? studentAlerts : adminAlerts;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
+          <h2 className="text-3xl font-bold text-foreground">
+            {isStudent ? `Welcome, ${CURRENT_STUDENT.name}` : "Dashboard"}
+          </h2>
           <p className="text-muted-foreground">
-            Academic Year 2025 - Semester 1
+            {isStudent
+              ? `${CURRENT_STUDENT.id} · Academic Year 2025 - Semester 1`
+              : "Academic Year 2025 - Semester 1"}
           </p>
         </div>
         <Button>
@@ -147,14 +183,16 @@ export default function Dashboard() {
                     <span className="rounded-full px-3 py-1 text-xs font-medium">
                       {cls.type}
                     </span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleMarkAttendance(cls)}
-                    >
-                      <ClipboardCheck className="h-4 w-4 mr-2" />
-                      Mark Attendance
-                    </Button>
+                    {!isStudent && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleMarkAttendance(cls)}
+                      >
+                        <ClipboardCheck className="h-4 w-4 mr-2" />
+                        Mark Attendance
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
