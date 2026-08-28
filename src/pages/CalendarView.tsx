@@ -11,11 +11,13 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ClassFilterBar, FiltersEmptyState } from "@/components/ClassFilterBar";
 import { useFilters } from "@/contexts/FiltersContext";
 import { filterClasses } from "@/utils/classFilters";
+import { useRole } from "@/contexts/RoleContext";
 
 export default function CalendarView() {
   const navigate = useNavigate();
   const { classes } = useClasses();
   const { filters } = useFilters();
+  const { isStudent } = useRole();
   const [currentDate] = useState(new Date(2025, 2, 10)); // March 10, 2025
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
