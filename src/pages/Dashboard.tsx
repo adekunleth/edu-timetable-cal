@@ -3,8 +3,10 @@ import { Calendar, Users, BookOpen, AlertCircle, ClipboardCheck } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AttendanceMarkingDialog } from "@/components/AttendanceMarkingDialog";
+import { useRole, CURRENT_STUDENT } from "@/contexts/RoleContext";
 
 export default function Dashboard() {
+  const { isStudent } = useRole();
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<any>(null);
 
