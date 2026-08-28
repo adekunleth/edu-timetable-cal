@@ -141,6 +141,8 @@ export default function Attendance() {
     COHORTS.find((c) => c.id === cohortId)?.courseId;
 
   const filteredRecords = periodRecords.filter((r) => {
+    // Privacy: a student may only ever see their own attendance record.
+    if (isStudent) return r.id === CURRENT_STUDENT.id;
     const matchesCourse =
       filters.courseId === "all" || cohortCourse(r.cohortId) === filters.courseId;
     const matchesCohort =
@@ -169,6 +171,15 @@ export default function Attendance() {
         0
       )
     : "—";
+
+  // Student-scoped metrics describe only the signed-in student's own record.
+  const myRecord = isStudent ? filteredRecords[0] : undefined;
+  const mySubjectsBelow = myRecord
+    ? visibleColumns.filter((c) =>
+        ["absent"].includes((myRecord as Record<string, string>)[c.key])
+      ).length
+    : 0;
+
 
   return (
     <div className="space-y-6">
