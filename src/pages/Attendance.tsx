@@ -186,13 +186,15 @@ export default function Attendance() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-foreground">
-            Attendance Tracking
+            {isStudent ? "My Attendance" : "Attendance Tracking"}
           </h2>
           <p className="text-muted-foreground">
-            Monitor and manage student attendance · {PERIOD_LABELS[period]}
+            {isStudent
+              ? `${CURRENT_STUDENT.name} · ${CURRENT_STUDENT.id} · ${PERIOD_LABELS[period]}`
+              : `Monitor and manage student attendance · ${PERIOD_LABELS[period]}`}
           </p>
         </div>
-        <Button>Export Report</Button>
+        {!isStudent && <Button>Export Report</Button>}
       </div>
 
       {/* Summary Cards */}
@@ -200,7 +202,7 @@ export default function Attendance() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Average Attendance
+              {isStudent ? "My Attendance Rate" : "Average Attendance"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -210,29 +212,48 @@ export default function Attendance() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Below Threshold
+              {isStudent ? "Attendance Status" : "Below Threshold"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{belowThreshold}</div>
-            <p className="text-xs text-muted-foreground">Students &lt; 80%</p>
+            {isStudent ? (
+              <>
+                <div
+                  className={`text-2xl font-bold ${
+                    belowThreshold === 0 ? "text-present" : "text-destructive"
+                  }`}
+                >
+                  {belowThreshold === 0 ? "On Track" : "At Risk"}
+                </div>
+                <p className="text-xs text-muted-foreground">80% threshold</p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-destructive">{belowThreshold}</div>
+                <p className="text-xs text-muted-foreground">Students &lt; 80%</p>
+              </>
+            )}
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Perfect Attendance
+              {isStudent ? "Subjects Missed" : "Perfect Attendance"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{perfectAttendance}</div>
-            <p className="text-xs text-muted-foreground">Students at 100%</p>
+            <div className="text-2xl font-bold text-foreground">
+              {isStudent ? mySubjectsBelow : perfectAttendance}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {isStudent ? "Absences this period" : "Students at 100%"}
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Late Arrivals
+              {isStudent ? "My Late Arrivals" : "Late Arrivals"}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -246,9 +267,10 @@ export default function Attendance() {
       <Card>
         <CardContent className="flex flex-wrap items-center gap-4 p-4">
           <ClassFilterBar
-            visible={["courseId", "cohortId", "subject"]}
+            visible={isStudent ? ["subject"] : ["courseId", "cohortId", "subject"]}
             className="flex-1"
           />
+
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
