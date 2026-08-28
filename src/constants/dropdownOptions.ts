@@ -32,22 +32,8 @@ export const INSTRUCTORS = [
   "Prof. Robert Taylor",
 ];
 
-export const CAMPUSES = [
-  "Sydney Campus",
-  "Melbourne Campus",
-  "Brisbane Campus",
-  "Perth Campus",
-];
-
-export const BUILDINGS_ROOMS = [
-  "Building A - Room 101",
-  "Building A - Room 201",
-  "Building A - Room 310",
-  "Building B - Room 150",
-  "Building B - Room 250",
-  "Building C - Room 100",
-  "Building C - Room 205",
-];
+// Campus names are derived from the location master data (Campus -> Venue -> Room).
+export { CAMPUS_NAMES as CAMPUSES } from "@/constants/locations";
 
 export const STUDY_PERIODS = [
   { id: "2025-S1", label: "2025 Semester 1", startDate: "2025-02-24", endDate: "2025-06-27" },

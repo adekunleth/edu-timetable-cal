@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getCampusNameForRoom, getLocationLabel } from "@/constants/locations";
 import { useClasses } from "@/contexts/ClassesContext";
 import { useFilters } from "@/contexts/FiltersContext";
 import { filterClasses } from "@/utils/classFilters";
@@ -78,7 +79,7 @@ export function ClassListTable() {
       room:
         session.deliveryMethod === "Online"
           ? "Online"
-          : `${session.building} - ${session.room}`,
+          : getLocationLabel(session.roomId) ?? "—",
     });
     setAttendanceDialogOpen(true);
   };
@@ -145,8 +146,8 @@ export function ClassListTable() {
                         <span className="text-online">Online</span>
                       ) : (
                         <div className="text-sm">
-                          <div>{session.room}</div>
-                          <div className="text-muted-foreground">{session.campus}</div>
+                          <div>{getLocationLabel(session.roomId) ?? "—"}</div>
+                          <div className="text-muted-foreground">{getCampusNameForRoom(session.roomId) ?? "—"}</div>
                         </div>
                       )}
                     </TableCell>
