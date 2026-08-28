@@ -310,6 +310,62 @@ export default function Attendance() {
         <CardContent>
           {!hasRows ? (
             <FiltersEmptyState />
+          ) : isStudent ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="p-3 text-left text-sm font-medium text-muted-foreground">Subject</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Sessions</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Present</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Late</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Excused</th>
+                    <th className="p-3 text-center text-sm font-medium text-muted-foreground">Absent</th>
+                    <th className="p-3 text-left text-sm font-medium text-muted-foreground">Attendance Rate</th>
+                    <th className="p-3 text-right text-sm font-medium text-muted-foreground">Breakdown</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myBreakdown.map((b) => (
+                    <tr
+                      key={b.subject}
+                      onClick={() => myRecord && openBreakdown(myRecord)}
+                      className="cursor-pointer border-b border-border hover:bg-muted/50"
+                    >
+                      <td className="p-3 text-sm font-medium text-foreground">{b.subject}</td>
+                      <td className="p-3 text-center text-sm text-muted-foreground">{b.total}</td>
+                      <td className="p-3 text-center text-sm text-present">{b.present}</td>
+                      <td className="p-3 text-center text-sm text-late">{b.late}</td>
+                      <td className="p-3 text-center text-sm text-excused">{b.excused}</td>
+                      <td className="p-3 text-center text-sm text-absent">{b.absent}</td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={`h-full ${b.rate >= 80 ? "bg-present" : "bg-destructive"}`}
+                              style={{ width: `${b.rate}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-foreground">{b.rate}%</span>
+                        </div>
+                      </td>
+                      <td className="p-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (myRecord) openBreakdown(myRecord);
+                          }}
+                        >
+                          View
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
