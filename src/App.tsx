@@ -44,6 +44,7 @@ const App = () => (
         </BrowserRouter>
         </FiltersProvider>
       </ClassesProvider>
+      </RoleProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
