@@ -87,7 +87,7 @@ export default function Dashboard() {
     },
   ];
 
-  const recentAlerts = [
+  const adminAlerts = [
     {
       message: "Room conflict detected for BIO101 on Thursday 3:00 PM",
       severity: "high",
@@ -102,13 +102,35 @@ export default function Dashboard() {
     },
   ];
 
+  // Student notices are personal — never operational alerts about other people.
+  const studentAlerts = [
+    {
+      message: "Your PHYS202 attendance is 78% — below the 80% threshold",
+      severity: "medium",
+    },
+    {
+      message: "CHEM202 Lab moved to Science Lab 3 this week",
+      severity: "low",
+    },
+    {
+      message: "Holiday scheduled: Mid-semester break starts March 15",
+      severity: "low",
+    },
+  ];
+
+  const recentAlerts = isStudent ? studentAlerts : adminAlerts;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
+          <h2 className="text-3xl font-bold text-foreground">
+            {isStudent ? `Welcome, ${CURRENT_STUDENT.name}` : "Dashboard"}
+          </h2>
           <p className="text-muted-foreground">
-            Academic Year 2025 - Semester 1
+            {isStudent
+              ? `${CURRENT_STUDENT.id} · Academic Year 2025 - Semester 1`
+              : "Academic Year 2025 - Semester 1"}
           </p>
         </div>
         <Button>
