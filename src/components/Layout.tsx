@@ -1,6 +1,7 @@
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import { Link, useLocation, Navigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useRole, ROLE_LABELS, Role } from "@/contexts/RoleContext";
 import {
   Select,
   SelectContent,
