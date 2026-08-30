@@ -1,40 +1,34 @@
-## Plan: Create PRD Document
+# Attendance Tracking: Drillable Metric Cards + Student Search
 
-Create a new file `PRD.md` at the project root containing a detailed Product Requirements Document for ClassLens based on what has been implemented so far.
+Two gaps in the staff (admin/instructor) Attendance view: the summary cards show counts (e.g. "Below Threshold: 3") with no way to see *which* students, and there is no search for large rosters.
 
-### Document Structure
+## 1. Clickable metric cards (staff view only)
 
-1. **Overview** — Product name, vision, problem statement, target users (academic administrators, course coordinators, timetabling officers).
+Each of the four summary cards becomes a toggle that filters the Attendance Records table to the students behind that number:
 
-2. **Goals & Non-Goals** — Prototype goals (validate unified scheduling UX) and explicit non-goals (no backend persistence, no multi-tenant auth).
+- **Average Attendance** — not clickable (it's an aggregate, not a subset); stays static.
+- **Below Threshold** — clicking filters the table to students with overall rate < 80%.
+- **Perfect Attendance** — clicking filters to students at 100%.
+- **Late Arrivals** — clicking filters to students with at least one "late" status in the visible subject columns.
 
-3. **User Personas** — Admin, Course Coordinator, Instructor.
+Behavior:
+- Clicking a card toggles the filter on/off; clicking another card switches to it.
+- The active card gets a visual highlight (ring/accent border) so it's clear a filter is applied.
+- When a card filter is active, a small "Clear" chip/button appears above the table to reset.
+- Card filters combine with the existing course/cohort/subject/period filters (they filter the already-filtered rows).
+- Cards recompute their counts from the current course/cohort/subject/period filter state, as they already do.
 
-4. **Information Architecture** — Sidebar navigation: Dashboard, Calendar, Subjects, Attendance, Cohorts, Reports, Settings.
+Student view is unchanged — its cards describe personal stats and there's only one student.
 
-5. **Feature Specifications** (detailed per module):
-   - **Dashboard** — Stats cards (active subjects, students, classes/week, attendance rate), today's schedule with mark-attendance action, alerts panel.
-   - **Calendar View** — Weekly grid + list view toggle, filters (type, day, cohort), "Add Class" entry point, color coding by delivery type.
-   - **Class Creation Form** — Sections: Academic Context (Subject dropdown combining code+title, academic year, study period, cohort), Schedule & Recurrence (start/end weeks derived from study period, excluded dates), Sessions (multi-session builder with day, time, instructor, delivery type/method, campus/building/room or online link, conditional fields), Attendance config (track toggle, min %, method), Description/notes/attachments. Auto-calculations: contact hours, total hours, number of weeks. Conflict detection for room/instructor.
-   - **Class List Table** — Columns: Subject (code + title), Cohort/Intake, Day, Time, Instructor, Type, Location. Sort/filter/search.
-   - **Attendance** — Session-based marking dialog (present/absent/late/excused), monthly summary view, "this month" filter with sample data.
-   - **Subjects, Cohorts, Reports** — Stub/placeholder pages.
-   - **Settings → Scheduling Framework** — Horizontal day selector (Mon–Fri default checked, Sat/Sun optional), operating start/end time, standard class durations. Selected days drive Calendar columns and form options.
+## 2. Student search (staff view only)
 
-6. **Data Model (Frontend Types)** — `ClassSchedule`, `ClassSession`, enums for `DeliveryType`, `DeliveryMethod`, `AttendanceMethod`. State managed via `ClassesContext`.
+- Add a search input (with a search icon) to the filter bar card, next to the period selector, labelled by placeholder "Search student name or ID…".
+- Case-insensitive substring match against both student name and student ID.
+- Combines with all other filters and the card filter.
+- When search yields no rows, the existing `FiltersEmptyState` is shown.
 
-7. **Dropdown Reference Data** — Subjects, Instructors, Campuses, Buildings/Rooms, Study Periods, Cohorts (from `dropdownOptions.ts`).
+## Technical notes
 
-8. **Business Rules** — Week generation from study period dates, conditional field visibility (delivery method), attendance threshold defaults.
-
-9. **UX & Design System** — shadcn/ui, Tailwind semantic tokens, color coding per delivery type (lecture/lab/tutorial/workshop/online).
-
-10. **Tech Stack** — React 18, Vite, TypeScript, Tailwind, shadcn/ui, React Router, React Query, date-fns.
-
-11. **Known Limitations** — In-memory state only (no persistence), no auth, conflict detection is client-side, sample/seed data.
-
-12. **Future Enhancements (v2)** — Lovable Cloud persistence, real room booking integration, bulk template creation, role-based access, notifications.
-
-### Deliverable
-
-Single new file: `PRD.md` at project root. No code changes.
+- All changes confined to `src/pages/Attendance.tsx`.
+- New state: `cardFilter: "none" | "below" | "perfect" | "late"` and `studentSearch: string`, both applied in the `filteredRecords` memo chain.
+- No changes to student-role logic, privacy scoping, or the breakdown dialog.
