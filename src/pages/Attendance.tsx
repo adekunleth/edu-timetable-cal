@@ -283,6 +283,7 @@ export default function Attendance() {
               <>
                 <div className="text-2xl font-bold text-destructive">{belowThreshold}</div>
                 <p className="text-xs text-muted-foreground">Students &lt; 80%</p>
+                <p className="mt-1 text-xs text-primary underline">Click card to view students</p>
               </>
             )}
           </CardContent>
