@@ -188,20 +188,26 @@ export default function Attendance() {
       : SUBJECT_COLUMNS.filter((c) => c.code === filters.subject);
 
   const hasRows = filteredRecords.length > 0;
-  const rates = filteredRecords.map((r) => parseInt(r.overallRate, 10));
-  const averageAttendance = hasRows
-    ? `${Math.round(rates.reduce((a, b) => a + b, 0) / rates.length)}%`
+  // Metric cards count from the course/cohort-scoped set so they stay stable
+  // while a card filter or search narrows the table.
+  const metricRates = scopedRecords.map((r) => parseInt(r.overallRate, 10));
+  const hasScoped = scopedRecords.length > 0;
+  const averageAttendance = hasScoped
+    ? `${Math.round(metricRates.reduce((a, b) => a + b, 0) / metricRates.length)}%`
     : "—";
-  const belowThreshold = hasRows ? rates.filter((r) => r < 80).length : "—";
-  const perfectAttendance = hasRows ? rates.filter((r) => r === 100).length : "—";
-  const lateArrivals = hasRows
-    ? filteredRecords.reduce(
+  const belowThreshold = hasScoped ? metricRates.filter((r) => r < 80).length : "—";
+  const perfectAttendance = hasScoped ? metricRates.filter((r) => r === 100).length : "—";
+  const lateArrivals = hasScoped
+    ? scopedRecords.reduce(
         (count, r) =>
           count +
           visibleColumns.filter((c) => (r as Record<string, string>)[c.key] === "late").length,
         0
       )
     : "—";
+
+  const toggleCardFilter = (f: CardFilter) =>
+    setCardFilter((prev) => (prev === f ? "none" : f));
 
   // Student-scoped metrics describe only the signed-in student's own record.
   const myRecord = isStudent ? filteredRecords[0] : undefined;
