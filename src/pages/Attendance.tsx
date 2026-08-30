@@ -145,7 +145,7 @@ export default function Attendance() {
   const cohortCourse = (cohortId: string) =>
     COHORTS.find((c) => c.id === cohortId)?.courseId;
 
-  const filteredRecords = periodRecords.filter((r) => {
+  const scopedRecords = periodRecords.filter((r) => {
     // Privacy: a student may only ever see their own attendance record.
     if (isStudent) return r.id === CURRENT_STUDENT.id;
     const matchesCourse =
@@ -155,6 +155,32 @@ export default function Attendance() {
       (filters.cohortId === "unassigned" ? false : r.cohortId === filters.cohortId);
     return matchesCourse && matchesCohort;
   });
+
+  const hasLate = (r: (typeof periodRecords)[number]) =>
+    SUBJECT_COLUMNS.some((c) => (r as Record<string, string>)[c.key] === "late");
+
+  const matchesCardFilter = (r: (typeof periodRecords)[number]) => {
+    const rate = parseInt(r.overallRate, 10);
+    switch (cardFilter) {
+      case "below":
+        return rate < 80;
+      case "perfect":
+        return rate === 100;
+      case "late":
+        return hasLate(r);
+      default:
+        return true;
+    }
+  };
+
+  const query = studentSearch.trim().toLowerCase();
+  const filteredRecords = scopedRecords.filter(
+    (r) =>
+      matchesCardFilter(r) &&
+      (query === "" ||
+        r.student.toLowerCase().includes(query) ||
+        r.id.toLowerCase().includes(query))
+  );
 
   const visibleColumns =
     filters.subject === "all"
