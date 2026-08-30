@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, AlertCircle, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { ClassFilterBar, FiltersEmptyState } from "@/components/ClassFilterBar";
 import { useFilters } from "@/contexts/FiltersContext";
 import { COHORTS, getCohortLabel } from "@/constants/dropdownOptions";
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/select";
 
 type PeriodKey = "week" | "lastWeek" | "month" | "semester";
+type CardFilter = "none" | "below" | "perfect" | "late";
 
 const PERIOD_LABELS: Record<PeriodKey, string> = {
   week: "This Week",
@@ -97,6 +99,8 @@ export default function Attendance() {
   const { isStudent } = useRole();
   const [period, setPeriod] = useState<PeriodKey>("week");
   const [selected, setSelected] = useState<StudentAttendanceTarget | null>(null);
+  const [cardFilter, setCardFilter] = useState<CardFilter>("none");
+  const [studentSearch, setStudentSearch] = useState("");
 
   // Records re-derived per selected period (CR: period selector must drive the UI).
   const periodRecords = attendanceRecords.map((r) => {
