@@ -261,7 +261,16 @@ export default function Attendance() {
             <div className="text-2xl font-bold text-present">{isStudent ? myAverage : averageAttendance}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          onClick={isStudent ? undefined : () => toggleCardFilter("below")}
+          className={
+            isStudent
+              ? undefined
+              : `cursor-pointer transition-shadow hover:shadow-md ${
+                  cardFilter === "below" ? "ring-2 ring-destructive" : ""
+                }`
+          }
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isStudent ? "Attendance Status" : "Below Threshold"}
@@ -288,7 +297,16 @@ export default function Attendance() {
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          onClick={isStudent ? undefined : () => toggleCardFilter("perfect")}
+          className={
+            isStudent
+              ? undefined
+              : `cursor-pointer transition-shadow hover:shadow-md ${
+                  cardFilter === "perfect" ? "ring-2 ring-present" : ""
+                }`
+          }
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isStudent ? "Subjects Below 80%" : "Perfect Attendance"}
@@ -303,7 +321,16 @@ export default function Attendance() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          onClick={isStudent ? undefined : () => toggleCardFilter("late")}
+          className={
+            isStudent
+              ? undefined
+              : `cursor-pointer transition-shadow hover:shadow-md ${
+                  cardFilter === "late" ? "ring-2 ring-late" : ""
+                }`
+          }
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isStudent ? "My Late Arrivals" : "Late Arrivals"}
