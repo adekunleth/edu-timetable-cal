@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, AlertCircle, Search, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { ClassFilterBar, FiltersEmptyState } from "@/components/ClassFilterBar";
 import { useFilters } from "@/contexts/FiltersContext";
 import { COHORTS, getCohortLabel } from "@/constants/dropdownOptions";
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/select";
 
 type PeriodKey = "week" | "lastWeek" | "month" | "semester";
+type CardFilter = "none" | "below" | "perfect" | "late";
 
 const PERIOD_LABELS: Record<PeriodKey, string> = {
   week: "This Week",
@@ -97,6 +99,8 @@ export default function Attendance() {
   const { isStudent } = useRole();
   const [period, setPeriod] = useState<PeriodKey>("week");
   const [selected, setSelected] = useState<StudentAttendanceTarget | null>(null);
+  const [cardFilter, setCardFilter] = useState<CardFilter>("none");
+  const [studentSearch, setStudentSearch] = useState("");
 
   // Records re-derived per selected period (CR: period selector must drive the UI).
   const periodRecords = attendanceRecords.map((r) => {
@@ -141,7 +145,7 @@ export default function Attendance() {
   const cohortCourse = (cohortId: string) =>
     COHORTS.find((c) => c.id === cohortId)?.courseId;
 
-  const filteredRecords = periodRecords.filter((r) => {
+  const scopedRecords = periodRecords.filter((r) => {
     // Privacy: a student may only ever see their own attendance record.
     if (isStudent) return r.id === CURRENT_STUDENT.id;
     const matchesCourse =
@@ -152,26 +156,58 @@ export default function Attendance() {
     return matchesCourse && matchesCohort;
   });
 
+  const hasLate = (r: (typeof periodRecords)[number]) =>
+    SUBJECT_COLUMNS.some((c) => (r as Record<string, string>)[c.key] === "late");
+
+  const matchesCardFilter = (r: (typeof periodRecords)[number]) => {
+    const rate = parseInt(r.overallRate, 10);
+    switch (cardFilter) {
+      case "below":
+        return rate < 80;
+      case "perfect":
+        return rate === 100;
+      case "late":
+        return hasLate(r);
+      default:
+        return true;
+    }
+  };
+
+  const query = studentSearch.trim().toLowerCase();
+  const filteredRecords = scopedRecords.filter(
+    (r) =>
+      matchesCardFilter(r) &&
+      (query === "" ||
+        r.student.toLowerCase().includes(query) ||
+        r.id.toLowerCase().includes(query))
+  );
+
   const visibleColumns =
     filters.subject === "all"
       ? SUBJECT_COLUMNS
       : SUBJECT_COLUMNS.filter((c) => c.code === filters.subject);
 
   const hasRows = filteredRecords.length > 0;
-  const rates = filteredRecords.map((r) => parseInt(r.overallRate, 10));
-  const averageAttendance = hasRows
-    ? `${Math.round(rates.reduce((a, b) => a + b, 0) / rates.length)}%`
+  // Metric cards count from the course/cohort-scoped set so they stay stable
+  // while a card filter or search narrows the table.
+  const metricRates = scopedRecords.map((r) => parseInt(r.overallRate, 10));
+  const hasScoped = scopedRecords.length > 0;
+  const averageAttendance = hasScoped
+    ? `${Math.round(metricRates.reduce((a, b) => a + b, 0) / metricRates.length)}%`
     : "—";
-  const belowThreshold = hasRows ? rates.filter((r) => r < 80).length : "—";
-  const perfectAttendance = hasRows ? rates.filter((r) => r === 100).length : "—";
-  const lateArrivals = hasRows
-    ? filteredRecords.reduce(
+  const belowThreshold = hasScoped ? metricRates.filter((r) => r < 80).length : "—";
+  const perfectAttendance = hasScoped ? metricRates.filter((r) => r === 100).length : "—";
+  const lateArrivals = hasScoped
+    ? scopedRecords.reduce(
         (count, r) =>
           count +
           visibleColumns.filter((c) => (r as Record<string, string>)[c.key] === "late").length,
         0
       )
     : "—";
+
+  const toggleCardFilter = (f: CardFilter) =>
+    setCardFilter((prev) => (prev === f ? "none" : f));
 
   // Student-scoped metrics describe only the signed-in student's own record.
   const myRecord = isStudent ? filteredRecords[0] : undefined;
@@ -225,7 +261,16 @@ export default function Attendance() {
             <div className="text-2xl font-bold text-present">{isStudent ? myAverage : averageAttendance}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          onClick={isStudent ? undefined : () => toggleCardFilter("below")}
+          className={
+            isStudent
+              ? undefined
+              : `cursor-pointer transition-shadow hover:shadow-md ${
+                  cardFilter === "below" ? "ring-2 ring-destructive" : ""
+                }`
+          }
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isStudent ? "Attendance Status" : "Below Threshold"}
@@ -247,11 +292,21 @@ export default function Attendance() {
               <>
                 <div className="text-2xl font-bold text-destructive">{belowThreshold}</div>
                 <p className="text-xs text-muted-foreground">Students &lt; 80%</p>
+                <p className="mt-1 text-xs text-primary underline">Click card to view students</p>
               </>
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          onClick={isStudent ? undefined : () => toggleCardFilter("perfect")}
+          className={
+            isStudent
+              ? undefined
+              : `cursor-pointer transition-shadow hover:shadow-md ${
+                  cardFilter === "perfect" ? "ring-2 ring-present" : ""
+                }`
+          }
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isStudent ? "Subjects Below 80%" : "Perfect Attendance"}
@@ -266,7 +321,16 @@ export default function Attendance() {
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card
+          onClick={isStudent ? undefined : () => toggleCardFilter("late")}
+          className={
+            isStudent
+              ? undefined
+              : `cursor-pointer transition-shadow hover:shadow-md ${
+                  cardFilter === "late" ? "ring-2 ring-late" : ""
+                }`
+          }
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {isStudent ? "My Late Arrivals" : "Late Arrivals"}
@@ -287,6 +351,18 @@ export default function Attendance() {
             className="flex-1"
           />
 
+          {!isStudent && (
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                placeholder="Search student name or ID…"
+                className="w-[240px] pl-8"
+              />
+            </div>
+          )}
+
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
@@ -305,7 +381,22 @@ export default function Attendance() {
       {/* Attendance Table */}
       <Card>
         <CardHeader>
-          <CardTitle>{isStudent ? "My Attendance Record" : "Attendance Records"}</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>{isStudent ? "My Attendance Record" : "Attendance Records"}</CardTitle>
+            {!isStudent && cardFilter !== "none" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCardFilter("none")}
+                className="gap-1"
+              >
+                {cardFilter === "below" && "Showing: Below 80%"}
+                {cardFilter === "perfect" && "Showing: Perfect attendance"}
+                {cardFilter === "late" && "Showing: With late arrivals"}
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {!hasRows ? (
