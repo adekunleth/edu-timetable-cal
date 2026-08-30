@@ -351,6 +351,18 @@ export default function Attendance() {
             className="flex-1"
           />
 
+          {!isStudent && (
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                placeholder="Search student name or ID…"
+                className="w-[240px] pl-8"
+              />
+            </div>
+          )}
+
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
             <SelectTrigger className="w-[160px]">
               <SelectValue />
@@ -369,7 +381,22 @@ export default function Attendance() {
       {/* Attendance Table */}
       <Card>
         <CardHeader>
-          <CardTitle>{isStudent ? "My Attendance Record" : "Attendance Records"}</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>{isStudent ? "My Attendance Record" : "Attendance Records"}</CardTitle>
+            {!isStudent && cardFilter !== "none" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCardFilter("none")}
+                className="gap-1"
+              >
+                {cardFilter === "below" && "Showing: Below 80%"}
+                {cardFilter === "perfect" && "Showing: Perfect attendance"}
+                {cardFilter === "late" && "Showing: With late arrivals"}
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {!hasRows ? (
