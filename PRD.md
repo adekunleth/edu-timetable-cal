@@ -1,6 +1,6 @@
 # ClassLens — Product Requirements Document (Detailed Logic Specification)
 
-**Version:** 0.3 (Prototype — includes CR-001 Course & Cohort Scoping)
+**Version:** 0.4 (Prototype — adds derived Class Enrollment from cohort sizes)
 **Status:** Implemented in prototype, not production-ready
 **Last updated:** August 2026
 
@@ -52,7 +52,7 @@ Six `ClassSchedule` records ship as initial state (`initialClasses`), covering e
 - **BUILDINGS_ROOMS** — 7 entries in the combined format `"Building X - Room NNN"`. The form splits this string on `" - Room "` to populate separate `building` and `room` fields.
 - **STUDY_PERIODS** — each has `{ id, label, startDate, endDate }` (e.g. `2025-S1`, `"2025 Semester 1"`, `2025-02-24` → `2025-06-27`). The dates drive week generation.
 - **COURSES** — 4 course entities as `{ id, code, title, label }` (`BSC-BIO`, `BIT-CS`, `BBUS`, `BENG-MEC`). Selection value is `id`, never the label.
-- **COHORTS** — 5 cohort entities as `{ id, label, courseId }`, each owned by exactly one course. Helpers: `getCohortsForCourse(courseId)` (returns all cohorts when the argument is `"all"`/undefined), `getCohortLabel(id)` (falls back to the raw id for unknown ids), `getCourseCode(id)`.
+- **COHORTS** — 5 cohort entities as `{ id, label, courseId, size }`, each owned by exactly one course. `size` is the number of students in the cohort and is the **single source of truth for enrollment counts** — see §15. Helpers: `getCohortsForCourse(courseId)` (returns all cohorts when the argument is `"all"`/undefined), `getCohortLabel(id)` (falls back to the raw id for unknown ids), `getCourseCode(id)`.
 
 ### 2.4 Core types
 
@@ -252,7 +252,7 @@ Each block has a hover-revealed "Mark" button (`opacity-0 → group-hover:opacit
 
 `src/components/ClassListTable.tsx` renders the same `classes` array as a table — one row per class, using **`sessions[0]`** as the representative session for schedule/instructor/location/attendance columns (a documented simplification for multi-session classes).
 
-**Columns:** Subject (`CODE - Title`), Course (course code, em-dash when unset), Credits (derived from the subject catalogue via `getSubjectCredits(cls.subject)`; em-dash when the code is not in the catalogue), Cohort/Intake (badge per cohort; two badges then a `+N` badge whose tooltip lists the remainder — the tooltip trigger wraps the badge in a `span` because Radix cannot attach a ref to the Badge component; em-dash when unassigned), Type (colour-coded badge), Schedule (day name + time range), Instructor, Location ("Online" or room + campus), Attendance (green check + min % when tracked, muted ✕ otherwise), Actions.
+**Columns:** Subject (`CODE - Title`), Course (course code, em-dash when unset), Credits (derived from the subject catalogue via `getSubjectCredits(cls.subject)`; em-dash when the code is not in the catalogue), Cohort/Intake (badge per cohort; two badges then a `+N` badge whose tooltip lists the remainder — the tooltip trigger wraps the badge in a `span` because Radix cannot attach a ref to the Badge component; em-dash when unassigned), **Enrollment** (`enrolled / capacity`, derived per §15 — em-dash when no cohorts are assigned; capacity omitted for online-only classes; the figure renders in destructive red with a warning tooltip when enrollment exceeds the smallest room capacity), Type (colour-coded badge), Schedule (day name + time range), Instructor, Location ("Online" or room + campus), Attendance (green check + min % when tracked, muted ✕ otherwise), Actions.
 
 **Filtering** — the table consumes the shared `FiltersContext` (see §14) via `filterClasses`, so search, course, cohort, subject, instructor, campus, type and day all apply here with the exact same predicates as the calendar grid. When the result set is empty it renders `FiltersEmptyState` with a "Clear filters" button.
 
