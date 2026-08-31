@@ -1,22 +1,44 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Users, BookOpen, AlertCircle, ClipboardCheck } from "lucide-react";
+import { Calendar, Users, BookOpen, AlertCircle, ClipboardCheck, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { AttendanceMarkingDialog } from "@/components/AttendanceMarkingDialog";
 import { useRole, CURRENT_STUDENT } from "@/contexts/RoleContext";
+import { useAttendanceSettings } from "@/contexts/AttendanceSettingsContext";
+import {
+  parseTimeToDate,
+  getWindowStatus,
+  formatFullDate,
+  formatHoursRemaining,
+  WindowInfo,
+} from "@/utils/attendanceWindow";
 
 export default function Dashboard() {
   const { isStudent } = useRole();
+  const { windowHours } = useAttendanceSettings();
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<any>(null);
 
-  const handleMarkAttendance = (cls: any) => {
+  const getClassWindow = (time: string): WindowInfo => {
+    const [startStr, endStr] = time.split(" - ");
+    const today = new Date();
+    return getWindowStatus(
+      parseTimeToDate(today, startStr),
+      parseTimeToDate(today, endStr),
+      windowHours
+    );
+  };
+
+  const handleMarkAttendance = (cls: any, windowInfo: WindowInfo) => {
+    if (windowInfo.status !== "open") return;
     setSelectedClass({
       subject: cls.subject.split(" - ")[0],
       title: cls.subject.split(" - ")[1],
-      date: "March 10, 2025",
+      date: formatFullDate(new Date()),
       time: cls.time,
       room: cls.room,
+      windowInfo,
+      windowHours,
     });
     setAttendanceDialogOpen(true);
   };
@@ -165,38 +187,64 @@ export default function Dashboard() {
             <CardTitle>Today's Schedule</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {upcomingClasses.map((cls, index) => (
-              <div
-                key={index}
-                className={`rounded-lg border p-4 ${cls.color}`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-1">
-                    <h4 className="font-semibold">{cls.subject}</h4>
-                    <p className="text-sm opacity-90">{cls.time}</p>
-                    <p className="text-sm opacity-75">{cls.room}</p>
-                    <p className="text-sm opacity-75">
-                      Instructor: {cls.instructor}
-                    </p>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="rounded-full px-3 py-1 text-xs font-medium">
-                      {cls.type}
-                    </span>
-                    {!isStudent && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleMarkAttendance(cls)}
-                      >
-                        <ClipboardCheck className="h-4 w-4 mr-2" />
-                        Mark Attendance
-                      </Button>
-                    )}
+            {upcomingClasses.map((cls, index) => {
+              const win = getClassWindow(cls.time);
+              return (
+                <div
+                  key={index}
+                  className={`rounded-lg border p-4 ${cls.color}`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-1">
+                      <h4 className="font-semibold">{cls.subject}</h4>
+                      <p className="text-sm opacity-90">{cls.time}</p>
+                      <p className="text-sm opacity-75">{cls.room}</p>
+                      <p className="text-sm opacity-75">
+                        Instructor: {cls.instructor}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span className="rounded-full px-3 py-1 text-xs font-medium">
+                        {cls.type}
+                      </span>
+                      {!isStudent &&
+                        (win.status === "open" ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleMarkAttendance(cls, win)}
+                            >
+                              <ClipboardCheck className="h-4 w-4 mr-2" />
+                              Mark Attendance
+                            </Button>
+                            <span className="text-xs text-muted-foreground">
+                              Closes in{" "}
+                              {formatHoursRemaining(win.hoursRemaining ?? 0)}
+                            </span>
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled
+                            title={
+                              win.status === "upcoming"
+                                ? "Marking opens when the class starts"
+                                : `Marking window closed — class ended more than ${windowHours}h ago`
+                            }
+                          >
+                            <Lock className="h-4 w-4 mr-2" />
+                            {win.status === "upcoming"
+                              ? "Not open yet"
+                              : "Window closed"}
+                          </Button>
+                        ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
 
