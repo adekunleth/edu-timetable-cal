@@ -22,7 +22,7 @@ import { ClipboardCheck, Pencil, Trash2, CheckCircle2, XCircle } from "lucide-re
 import { AttendanceMarkingDialog } from "./AttendanceMarkingDialog";
 import { FiltersEmptyState } from "./ClassFilterBar";
 import { ClassSchedule } from "@/types/classForm";
-import { getCohortLabel, getCourseCode } from "@/constants/dropdownOptions";
+import { getCohortLabel, getCourseCode, getSubjectCredits } from "@/constants/dropdownOptions";
 
 const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
