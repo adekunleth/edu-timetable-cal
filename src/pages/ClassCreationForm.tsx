@@ -17,7 +17,7 @@ import { useClasses } from "@/contexts/ClassesContext";
 import { ClassSchedule, ClassSession, DeliveryType, DeliveryMethod } from "@/types/classForm";
 import { ChevronLeft, Save, Upload, Plus, Trash2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { SUBJECTS, INSTRUCTORS, STUDY_PERIODS, COHORTS, COURSES, getCohortsForCourse } from "@/constants/dropdownOptions";
+import { SUBJECTS, INSTRUCTORS, STUDY_PERIODS, COHORTS, COURSES, getCohortsForCourse, getSubjectsForCourse } from "@/constants/dropdownOptions";
 import {
   CAMPUSES_MASTER,
   getRoomsForVenue,
@@ -48,6 +48,7 @@ export default function ClassCreationForm() {
   const [cohortIds, setCohortIds] = useState<string[]>([]);
 
   // Changing the course drops cohorts that no longer belong to it (CR-001 §10)
+  // and clears a subject that isn't linked to the new course.
   const handleCourseChange = (value: string) => {
     const allowed = getCohortsForCourse(value).map((c) => c.id);
     const kept = cohortIds.filter((id) => allowed.includes(id));
@@ -58,6 +59,14 @@ export default function ClassCreationForm() {
       });
     }
     setCohortIds(kept);
+    const allowedSubjects = getSubjectsForCourse(value);
+    if (selectedSubject && !allowedSubjects.some((s) => s.label === selectedSubject)) {
+      setSelectedSubject("");
+      toast({
+        title: "Subject selection cleared",
+        description: "The selected subject is not linked to the chosen course.",
+      });
+    }
     setCourseId(value);
   };
 
@@ -320,13 +329,18 @@ export default function ClassCreationForm() {
                 <SelectValue placeholder="Select a subject" />
               </SelectTrigger>
               <SelectContent>
-                {SUBJECTS.map((subject) => (
+                {getSubjectsForCourse(courseId).map((subject) => (
                   <SelectItem key={subject.code} value={subject.label}>
                     {subject.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {courseId && (
+              <p className="text-xs text-muted-foreground">
+                Only subjects linked to the selected course are shown.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

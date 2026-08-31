@@ -46,7 +46,7 @@ Six `ClassSchedule` records ship as initial state (`initialClasses`), covering e
 
 `src/constants/dropdownOptions.ts` holds the canonical option lists used by dropdowns throughout the app:
 
-- **SUBJECTS** — 6 entries as `{ code, title, label }` where `label = "CODE - Title"` (e.g. `"BIO101 - Anatomy Basics"`). The label is the stored selection value; code and title are recovered from it at publish time.
+- **SUBJECTS** — 6 entries as `{ code, title, label, courseIds, credits }` where `label = "CODE - Title"` (e.g. `"BIO101 - Anatomy Basics"`). The label is the stored selection value; code and title are recovered from it at publish time. `courseIds` scopes the Add Class dropdown to the selected course; `credits` is surfaced in the class list via `getSubjectCredits`. This catalogue stands in for an external subject-management module and is read-only in the prototype.
 - **INSTRUCTORS** — 6 names.
 - **CAMPUSES** — Sydney, Melbourne, Brisbane, Perth.
 - **BUILDINGS_ROOMS** — 7 entries in the combined format `"Building X - Room NNN"`. The form splits this string on `" - Room "` to populate separate `building` and `room` fields.
@@ -132,7 +132,7 @@ The form (`src/pages/ClassCreationForm.tsx`) is the heart of the prototype. It i
 
 | Field | Logic |
 |---|---|
-| **Subject** * | Single dropdown of `SUBJECTS[].label`. The selected value is the full label string; at publish time the form looks the label up in `SUBJECTS` to recover `code` and `title`. |
+| **Subject** * | Single dropdown of `SUBJECTS[].label`, scoped by the selected course via `getSubjectsForCourse(courseId)` — when a course is chosen, only subjects whose `courseIds` include it are listed (all subjects when no course is chosen), and a hint line explains the scoping. Changing the course clears the selected subject if it is not linked to the new course (same pruning pattern as cohorts). The selected value is the full label string; at publish time the form looks the label up in `SUBJECTS` to recover `code` and `title`. The catalogue itself is read-only reference data owned by an external subject module; it also carries `credits`, surfaced in the class list. |
 | **Study Period** * | Dropdown of `STUDY_PERIODS`. **Changing it resets `startWeek` and `endWeek` to `undefined`** because the generated week list is period-specific. |
 | **Course** | Optional dropdown of `COURSES` (value = `Course.id`). Changing it **prunes any selected cohorts that do not belong to the new course**. |
 | **Cohort / Intake** | Optional multi-select (`CohortMultiSelect`, Popover + Command + checkbox list). Options are `getCohortsForCourse(courseId)` — all cohorts when no course is chosen. Stored as `cohortIds: string[]`; an empty array is persisted (never `undefined`). The trigger shows up to two cohort labels then `+N`. |
@@ -252,7 +252,7 @@ Each block has a hover-revealed "Mark" button (`opacity-0 → group-hover:opacit
 
 `src/components/ClassListTable.tsx` renders the same `classes` array as a table — one row per class, using **`sessions[0]`** as the representative session for schedule/instructor/location/attendance columns (a documented simplification for multi-session classes).
 
-**Columns:** Subject (`CODE - Title`), Course (course code, em-dash when unset), Cohort/Intake (badge per cohort; two badges then a `+N` badge whose tooltip lists the remainder — the tooltip trigger wraps the badge in a `span` because Radix cannot attach a ref to the Badge component; em-dash when unassigned), Type (colour-coded badge), Schedule (day name + time range), Instructor, Location ("Online" or room + campus), Attendance (green check + min % when tracked, muted ✕ otherwise), Actions.
+**Columns:** Subject (`CODE - Title`), Course (course code, em-dash when unset), Credits (derived from the subject catalogue via `getSubjectCredits(cls.subject)`; em-dash when the code is not in the catalogue), Cohort/Intake (badge per cohort; two badges then a `+N` badge whose tooltip lists the remainder — the tooltip trigger wraps the badge in a `span` because Radix cannot attach a ref to the Badge component; em-dash when unassigned), Type (colour-coded badge), Schedule (day name + time range), Instructor, Location ("Online" or room + campus), Attendance (green check + min % when tracked, muted ✕ otherwise), Actions.
 
 **Filtering** — the table consumes the shared `FiltersContext` (see §14) via `filterClasses`, so search, course, cohort, subject, instructor, campus, type and day all apply here with the exact same predicates as the calendar grid. When the result set is empty it renders `FiltersEmptyState` with a "Clear filters" button.
 
