@@ -389,6 +389,22 @@ export default function ClassCreationForm() {
               onChange={setCohortIds}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Estimated Enrollment</Label>
+            <Input
+              readOnly
+              value={
+                cohortIds.length === 0
+                  ? "— (no cohorts assigned)"
+                  : `${estimatedEnrollment} students`
+              }
+              className="bg-muted"
+            />
+            <p className="text-xs text-muted-foreground">
+              Derived from the sizes of the assigned cohorts.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
@@ -704,6 +720,19 @@ export default function ClassCreationForm() {
                               <span>Room conflict: this room is already booked for this time</span>
                             </div>
                           )}
+                          {session.roomId &&
+                            estimatedEnrollment > 0 &&
+                            (resolveLocation(session.roomId)?.capacity ?? Infinity) <
+                              estimatedEnrollment && (
+                              <div className="flex items-center gap-2 text-sm text-amber-600">
+                                <AlertCircle className="h-4 w-4" />
+                                <span>
+                                  Capacity warning: estimated enrollment ({estimatedEnrollment})
+                                  exceeds this room's capacity (
+                                  {resolveLocation(session.roomId)?.capacity})
+                                </span>
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>
