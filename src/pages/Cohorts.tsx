@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, X } from "lucide-react";
+import { COHORTS, COURSES, getCourseCode } from "@/constants/dropdownOptions";
 import {
   Select,
   SelectContent,
