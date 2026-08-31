@@ -48,6 +48,7 @@ export default function ClassCreationForm() {
   const [cohortIds, setCohortIds] = useState<string[]>([]);
 
   // Changing the course drops cohorts that no longer belong to it (CR-001 §10)
+  // and clears a subject that isn't linked to the new course.
   const handleCourseChange = (value: string) => {
     const allowed = getCohortsForCourse(value).map((c) => c.id);
     const kept = cohortIds.filter((id) => allowed.includes(id));
@@ -58,6 +59,14 @@ export default function ClassCreationForm() {
       });
     }
     setCohortIds(kept);
+    const allowedSubjects = getSubjectsForCourse(value);
+    if (selectedSubject && !allowedSubjects.some((s) => s.label === selectedSubject)) {
+      setSelectedSubject("");
+      toast({
+        title: "Subject selection cleared",
+        description: "The selected subject is not linked to the chosen course.",
+      });
+    }
     setCourseId(value);
   };
 
