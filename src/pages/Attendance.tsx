@@ -243,7 +243,7 @@ export default function Attendance() {
           <p className="text-muted-foreground">
             {isStudent
               ? `${CURRENT_STUDENT.name} · ${CURRENT_STUDENT.id} · ${PERIOD_LABELS[period]}`
-              : `Monitor and manage student attendance · ${PERIOD_LABELS[period]}`}
+              : `Monitor and manage student attendance · ${PERIOD_LABELS[period]} · ${scopedEnrollment} enrolled in scope`}
           </p>
         </div>
         {!isStudent && <Button>Export Report</Button>}
