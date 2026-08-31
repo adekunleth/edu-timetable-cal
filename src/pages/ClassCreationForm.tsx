@@ -25,6 +25,7 @@ import {
   resolveLocation,
 } from "@/constants/locations";
 import { CohortMultiSelect } from "@/components/CohortMultiSelect";
+import { getCohortSize } from "@/utils/enrollment";
 import { generateWeeksForPeriod, calculateNumberOfWeeks } from "@/utils/weekGenerator";
 
 const typeColorMap: Record<DeliveryType, string> = {
@@ -134,6 +135,12 @@ export default function ClassCreationForm() {
   const totalContactHours = useMemo(() => {
     return contactHours * numberOfWeeks;
   }, [contactHours, numberOfWeeks]);
+
+  // Enrollment is derived from cohort sizes — never typed in manually.
+  const estimatedEnrollment = useMemo(
+    () => cohortIds.reduce((sum, id) => sum + getCohortSize(id), 0),
+    [cohortIds]
+  );
 
   // Room conflict detection
   const detectRoomConflict = (sessionToCheck: ClassSession) => {
