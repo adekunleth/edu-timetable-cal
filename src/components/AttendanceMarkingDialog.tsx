@@ -8,8 +8,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, AlertCircle, Lock, Timer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { WindowInfo, formatHoursRemaining } from "@/utils/attendanceWindow";
 
 interface Student {
   id: string;
@@ -23,6 +24,9 @@ interface ClassInfo {
   date: string;
   time: string;
   room: string;
+  /** Attendance marking window state for this session occurrence. */
+  windowInfo?: WindowInfo;
+  windowHours?: number;
 }
 
 interface AttendanceMarkingDialogProps {
@@ -69,7 +73,21 @@ export function AttendanceMarkingDialog({
     setAttendance(allPresent);
   };
 
+  const windowClosed = classInfo.windowInfo?.status === "closed";
+  const windowUpcoming = classInfo.windowInfo?.status === "upcoming";
+
   const handleSave = () => {
+    // Defensive: never save outside the marking window
+    if (classInfo.windowInfo && classInfo.windowInfo.status !== "open") {
+      toast({
+        title: "Marking Window Closed",
+        description:
+          "Attendance can no longer be recorded for this session.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if all students have a status
     const unmarkedStudents = students.filter((s) => !attendance[s.id]);
     
@@ -128,6 +146,41 @@ export function AttendanceMarkingDialog({
             </div>
           </DialogDescription>
         </DialogHeader>
+
+        {classInfo.windowInfo && (
+          <div
+            className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
+              windowClosed
+                ? "border-destructive/30 bg-destructive/10 text-destructive"
+                : windowUpcoming
+                  ? "border-late/30 bg-late/10 text-late"
+                  : "border-present/30 bg-present/10 text-present"
+            }`}
+          >
+            {windowClosed ? (
+              <>
+                <Lock className="h-4 w-4 shrink-0" />
+                Marking window closed — this session ended more than{" "}
+                {classInfo.windowHours ?? 48} hours ago and can no longer be
+                edited.
+              </>
+            ) : windowUpcoming ? (
+              <>
+                <Timer className="h-4 w-4 shrink-0" />
+                Marking opens when the class starts.
+              </>
+            ) : (
+              <>
+                <Timer className="h-4 w-4 shrink-0" />
+                Marking window open — closes in{" "}
+                {formatHoursRemaining(
+                  classInfo.windowInfo.hoursRemaining ?? 0
+                )}
+                .
+              </>
+            )}
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -198,7 +251,9 @@ export function AttendanceMarkingDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Attendance</Button>
+          <Button onClick={handleSave} disabled={windowClosed || windowUpcoming}>
+            Save Attendance
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

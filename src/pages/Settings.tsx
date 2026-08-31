@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAttendanceSettings } from "@/contexts/AttendanceSettingsContext";
 
 const PERIOD_SYSTEMS = {
   semester: { label: "Semester System (2 periods)", periods: ["Semester 1", "Semester 2"] },
@@ -43,6 +44,7 @@ export default function Settings() {
   const [holidayType, setHolidayType] = useState("Public Holiday");
   const [dayStart, setDayStart] = useState("08:00");
   const [dayEnd, setDayEnd] = useState("19:00");
+  const { windowHours, setWindowHours } = useAttendanceSettings();
 
   const activeDays = Object.entries(schedulingDays).filter(([, v]) => v).length;
   const toHours = (t: string) => {
@@ -232,6 +234,20 @@ export default function Settings() {
             <div className="space-y-2">
               <Label>Late Arrival Grace Period (minutes)</Label>
               <Input type="number" placeholder="10" />
+            </div>
+            <div className="space-y-2">
+              <Label>Attendance Marking Window (hours after class ends)</Label>
+              <Input
+                type="number"
+                min={1}
+                value={windowHours}
+                onChange={(e) => setWindowHours(Number(e.target.value))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Marking opens when a class starts and closes {windowHours} hour
+                {windowHours === 1 ? "" : "s"} after it ends. After that, the
+                session is locked.
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <input type="checkbox" id="auto-alerts" className="rounded" />
