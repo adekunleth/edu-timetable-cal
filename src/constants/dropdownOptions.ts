@@ -70,14 +70,17 @@ export interface Cohort {
   id: string;
   label: string;
   courseId: string;
+  /** Number of students in the cohort — the single source of truth for
+   *  enrollment counts. Class enrollment is DERIVED by summing these. */
+  size: number;
 }
 
 export const COHORTS: Cohort[] = [
-  { id: "2025-S1-BIO", label: "2025 S1 Intake", courseId: "BSC-BIO" },
-  { id: "2025-S2-BIO", label: "2025 S2 Intake", courseId: "BSC-BIO" },
-  { id: "2024-S2-CS", label: "2024 S2 Intake", courseId: "BIT-CS" },
-  { id: "INTL-A", label: "International Cohort A", courseId: "BIT-CS" },
-  { id: "INTL-B", label: "International Cohort B", courseId: "BBUS" },
+  { id: "2025-S1-BIO", label: "2025 S1 Intake", courseId: "BSC-BIO", size: 45 },
+  { id: "2025-S2-BIO", label: "2025 S2 Intake", courseId: "BSC-BIO", size: 32 },
+  { id: "2024-S2-CS", label: "2024 S2 Intake", courseId: "BIT-CS", size: 28 },
+  { id: "INTL-A", label: "International Cohort A", courseId: "BIT-CS", size: 38 },
+  { id: "INTL-B", label: "International Cohort B", courseId: "BBUS", size: 25 },
 ];
 
 export const getCohortsForCourse = (courseId?: string): Cohort[] =>
