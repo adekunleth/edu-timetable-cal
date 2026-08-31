@@ -23,6 +23,7 @@ import { AttendanceMarkingDialog } from "./AttendanceMarkingDialog";
 import { FiltersEmptyState } from "./ClassFilterBar";
 import { ClassSchedule } from "@/types/classForm";
 import { getCohortLabel, getCourseCode, getSubjectCredits } from "@/constants/dropdownOptions";
+import { getClassCapacity, getClassEnrollment } from "@/utils/enrollment";
 
 const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -105,6 +106,7 @@ export function ClassListTable() {
                 <TableHead>Course</TableHead>
                 <TableHead>Credits</TableHead>
                 <TableHead>Cohort/Intake</TableHead>
+                <TableHead>Enrollment</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Schedule</TableHead>
                 <TableHead>Instructor</TableHead>
