@@ -329,13 +329,18 @@ export default function ClassCreationForm() {
                 <SelectValue placeholder="Select a subject" />
               </SelectTrigger>
               <SelectContent>
-                {SUBJECTS.map((subject) => (
+                {getSubjectsForCourse(courseId).map((subject) => (
                   <SelectItem key={subject.code} value={subject.label}>
                     {subject.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {courseId && (
+              <p className="text-xs text-muted-foreground">
+                Only subjects linked to the selected course are shown.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

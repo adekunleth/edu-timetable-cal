@@ -103,6 +103,7 @@ export function ClassListTable() {
               <TableRow>
                 <TableHead>Subject</TableHead>
                 <TableHead>Course</TableHead>
+                <TableHead>Credits</TableHead>
                 <TableHead>Cohort/Intake</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Schedule</TableHead>
@@ -123,6 +124,9 @@ export function ClassListTable() {
                     </TableCell>
                     <TableCell>
                       {courseCode ?? <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                    <TableCell>
+                      {getSubjectCredits(cls.subject) ?? <span className="text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell>
                       <CohortCell cohortIds={cls.cohortIds} />
