@@ -424,3 +424,45 @@ Rules encoded:
 ### 14.8 Seed data coverage
 
 The six seeded classes deliberately exercise every branch: a single-cohort class, a two-cohort class, a class with a course but cohorts from that course, a class with cohorts spanning two courses, a class tagged by cohort only (no `courseId`, to exercise transitive course matching), and one class with `cohortIds: []` (to exercise the `unassigned` filter).
+
+---
+
+## 15. Class Enrollment Derivation (v0.4)
+
+### 15.1 Rationale
+
+A class has no "number of enrolled students" field and the UI never asks for one. In a real SIS, students enroll into cohorts and cohorts are assigned to classes, so class size is an output of cohort assignment, not an input. The prototype mirrors this:
+
+```
+class enrollment = Σ size(cohort) for each cohort in ClassSchedule.cohortIds
+class capacity   = min(Room.capacity) across the class's physical sessions
+```
+
+This removes the stale, duplicated "students" number that previously lived only on the Cohorts page, and guarantees the Cohorts page, the Add Class form, the class list, and the Attendance header can never disagree about how many students a class serves.
+
+### 15.2 Data model
+
+- `Cohort.size: number` (seeded 25–45) is the only place a student count is stored.
+- `ClassSchedule` is unchanged — enrollment is computed from `cohortIds`, never persisted.
+- Room capacity comes from the location master data (`Room.capacity` via `resolveLocation`), never typed per session.
+
+### 15.3 Helpers (`src/utils/enrollment.ts`)
+
+- `getCohortSize(cohortId)` → cohort `size`, `0` for unknown ids.
+- `getClassEnrollment(cls)` → sum of cohort sizes over `cls.cohortIds`; `0` when unassigned (rendered as an em-dash, since "no cohorts" is not "zero students").
+- `getClassCapacity(cls)` → the **smallest** `Room.capacity` among sessions with a `roomId` and a non-Online delivery method; `undefined` for online-only classes (no capacity ceiling). The minimum is used because every physical session must seat the whole cohort set — the tightest room is the binding constraint.
+- `isOverCapacity(cls)` → `capacity != null && enrollment > capacity`.
+
+### 15.4 UI surfaces
+
+1. **Add Class form — Estimated Enrollment** (Academic Context, read-only `Input` beside the cohort multi-select): recomputed in a `useMemo` over `cohortIds` on every toggle; shows `N students`, or `— (no cohorts assigned)` when empty. A caption states the value is derived from cohort sizes.
+2. **Add Class form — capacity warning**: when a session's selected room has `capacity < estimatedEnrollment` (and enrollment > 0), an amber advisory renders under the room picker, mirroring the room-conflict warning. It does **not** block publishing — over-enrollment is a real-world scheduling state officers need to see, not an error.
+3. **Class list — Enrollment column**: `enrolled / capacity` (capacity omitted for online-only). Over-capacity rows render in destructive red with a `⚠` tooltip ("Enrollment exceeds room capacity").
+4. **Attendance (staff) header**: subtitle appends `· N enrolled in scope`, where N sums the sizes of the **distinct cohorts** present in the currently filtered records — so narrowing the course/cohort filters narrows the enrollment figure. The synthetic roster itself is unchanged (documented limitation §12).
+5. **Cohorts page**: the local hardcoded array is deleted; cards are built from the shared `COHORTS` entity (`name = course code + label`, `program = course title`, `students = cohort.size`). Campus/intake remain display-only fields (keyed by cohort id) until cohorts gain a home campus in the model.
+
+### 15.5 Deliberate exclusions
+
+- No per-student enrollment records — a real SIS derives class lists from individual enrollments; the prototype stops at cohort-level aggregates.
+- No manual enrollment override, waitlists, or capacity enforcement at publish time.
+- Cohort sizes are static seed data; there is no UI to edit a cohort's size yet.
