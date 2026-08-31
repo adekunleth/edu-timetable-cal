@@ -7,6 +7,7 @@ import { Layout } from "@/components/Layout";
 import { ClassesProvider } from "@/contexts/ClassesContext";
 import { FiltersProvider } from "@/contexts/FiltersContext";
 import { RoleProvider } from "@/contexts/RoleContext";
+import { AttendanceSettingsProvider } from "@/contexts/AttendanceSettingsContext";
 import Dashboard from "./pages/Dashboard";
 import CalendarView from "./pages/CalendarView";
 import ClassCreationForm from "./pages/ClassCreationForm";
@@ -23,6 +24,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <RoleProvider>
+      <AttendanceSettingsProvider>
       <ClassesProvider>
         <FiltersProvider>
         <Toaster />
@@ -44,6 +46,7 @@ const App = () => (
         </BrowserRouter>
         </FiltersProvider>
       </ClassesProvider>
+      </AttendanceSettingsProvider>
       </RoleProvider>
     </TooltipProvider>
   </QueryClientProvider>
