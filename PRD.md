@@ -46,7 +46,7 @@ Six `ClassSchedule` records ship as initial state (`initialClasses`), covering e
 
 `src/constants/dropdownOptions.ts` holds the canonical option lists used by dropdowns throughout the app:
 
-- **SUBJECTS** — 6 entries as `{ code, title, label }` where `label = "CODE - Title"` (e.g. `"BIO101 - Anatomy Basics"`). The label is the stored selection value; code and title are recovered from it at publish time.
+- **SUBJECTS** — 6 entries as `{ code, title, label, courseIds, credits }` where `label = "CODE - Title"` (e.g. `"BIO101 - Anatomy Basics"`). The label is the stored selection value; code and title are recovered from it at publish time. `courseIds` scopes the Add Class dropdown to the selected course; `credits` is surfaced in the class list via `getSubjectCredits`. This catalogue stands in for an external subject-management module and is read-only in the prototype.
 - **INSTRUCTORS** — 6 names.
 - **CAMPUSES** — Sydney, Melbourne, Brisbane, Perth.
 - **BUILDINGS_ROOMS** — 7 entries in the combined format `"Building X - Room NNN"`. The form splits this string on `" - Room "` to populate separate `building` and `room` fields.
