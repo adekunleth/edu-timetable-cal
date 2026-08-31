@@ -236,8 +236,9 @@ export default function Settings() {
               <Input type="number" placeholder="10" />
             </div>
             <div className="space-y-2">
-              <Label>Attendance Marking Window (hours after class ends)</Label>
+              <Label htmlFor="attendance-window">Attendance Marking Window (hours after class ends)</Label>
               <Input
+                id="attendance-window"
                 type="number"
                 min={1}
                 value={windowHours}
