@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { getLocationLabel } from "@/constants/locations";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Plus, ClipboardCheck, CalendarDays, List } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, ClipboardCheck, CalendarDays, List, Lock } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AttendanceMarkingDialog } from "@/components/AttendanceMarkingDialog";
@@ -12,24 +12,39 @@ import { ClassFilterBar, FiltersEmptyState } from "@/components/ClassFilterBar";
 import { useFilters } from "@/contexts/FiltersContext";
 import { filterClasses } from "@/utils/classFilters";
 import { useRole } from "@/contexts/RoleContext";
+import { useAttendanceSettings } from "@/contexts/AttendanceSettingsContext";
+import {
+  getWeekStart,
+  addDays,
+  parseTimeToDate,
+  getWindowStatus,
+  formatDateLabel,
+  formatFullDate,
+  formatHoursRemaining,
+} from "@/utils/attendanceWindow";
 
 export default function CalendarView() {
   const navigate = useNavigate();
   const { classes } = useClasses();
   const { filters } = useFilters();
   const { isStudent } = useRole();
-  const [currentDate] = useState(new Date(2025, 2, 10)); // March 10, 2025
+  const { windowHours } = useAttendanceSettings();
+  const weekStart = getWeekStart();
+  const weekEnd = addDays(weekStart, 4); // Friday
   const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<any>(null);
 
   const handleMarkAttendance = (cls: any) => {
+    if (cls.window?.status !== "open") return;
     setSelectedClass({
       subject: cls.subject,
       title: cls.title,
-      date: "March 10, 2025",
-      time: "9:00 AM - 11:00 AM",
+      date: formatFullDate(cls.occurrenceStart),
+      time: cls.timeLabel,
       room: cls.room,
+      windowInfo: cls.window,
+      windowHours,
     });
     setAttendanceDialogOpen(true);
   };
@@ -59,6 +74,12 @@ export default function CalendarView() {
       const endHour = parseInt(session.endTime.split(":")[0]);
       const duration = endHour - startHour;
 
+      // Concrete occurrence for this week, used by the attendance window
+      const dayDate = addDays(weekStart, session.day);
+      const occurrenceStart = parseTimeToDate(dayDate, session.startTime);
+      const occurrenceEnd = parseTimeToDate(dayDate, session.endTime);
+      const window = getWindowStatus(occurrenceStart, occurrenceEnd, windowHours);
+
       return {
         day: session.day,
         startTime: startTimeIndex,
@@ -69,6 +90,10 @@ export default function CalendarView() {
         room: session.deliveryMethod === "Online" ? "Online" : getLocationLabel(session.roomId) ?? "",
         color: cls.color,
         classId: cls.id,
+        occurrenceStart,
+        occurrenceEnd,
+        window,
+        timeLabel: `${session.startTime} - ${session.endTime}`,
       };
     })
   );
@@ -80,7 +105,9 @@ export default function CalendarView() {
           <h2 className="text-3xl font-bold text-foreground">
             Class Schedule
           </h2>
-          <p className="text-muted-foreground">Week View - March 10-14, 2025</p>
+          <p className="text-muted-foreground">
+            Week View — {formatDateLabel(weekStart)} to {formatDateLabel(weekEnd)}, {weekEnd.getFullYear()}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "calendar" | "list")}>
@@ -160,7 +187,7 @@ export default function CalendarView() {
                       {day}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      Mar {10 + index}
+                      {formatDateLabel(addDays(weekStart, index))}
                     </div>
                   </div>
                 ))}
@@ -206,17 +233,33 @@ export default function CalendarView() {
                               <div className="mt-1 text-xs opacity-75">
                                 {cls.room}
                               </div>
-                              {!isStudent && (
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  className="absolute bottom-2 right-2 h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => handleMarkAttendance(cls)}
-                                >
-                                  <ClipboardCheck className="h-3 w-3 mr-1" />
-                                  Mark
-                                </Button>
-                              )}
+                              {!isStudent &&
+                                (cls.window.status === "open" ? (
+                                  <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    className="absolute bottom-2 right-2 h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                    title={`Marking window closes in ${formatHoursRemaining(cls.window.hoursRemaining ?? 0)}`}
+                                    onClick={() => handleMarkAttendance(cls)}
+                                  >
+                                    <ClipboardCheck className="h-3 w-3 mr-1" />
+                                    Mark
+                                  </Button>
+                                ) : (
+                                  <span
+                                    className="absolute bottom-2 right-2 flex h-6 items-center gap-1 rounded-md bg-muted px-2 text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-not-allowed"
+                                    title={
+                                      cls.window.status === "upcoming"
+                                        ? "Marking opens when the class starts"
+                                        : `Marking window closed — class ended more than ${windowHours}h ago`
+                                    }
+                                  >
+                                    <Lock className="h-3 w-3" />
+                                    {cls.window.status === "upcoming"
+                                      ? "Not open"
+                                      : "Closed"}
+                                  </span>
+                                ))}
                             </div>
                           ))}
                       </div>
