@@ -14,48 +14,26 @@ export default function Cohorts() {
   const [program, setProgram] = useState("all");
   const [campus, setCampus] = useState("all");
   const [intake, setIntake] = useState("all");
-  const cohorts = [
-    {
-      name: "Nursing 2025",
-      program: "Bachelor of Nursing",
-      students: 45,
-      campus: "Sydney Campus",
-      intake: "February 2025",
-      subjects: ["BIO101", "CHEM101", "NURS101"],
-    },
-    {
-      name: "Science 2024",
-      program: "Bachelor of Science",
-      students: 32,
-      campus: "Sydney Campus",
-      intake: "February 2024",
-      subjects: ["CHEM202", "BIO201", "MATH201"],
-    },
-    {
-      name: "Engineering 2023",
-      program: "Bachelor of Engineering",
-      students: 28,
-      campus: "Melbourne Campus",
-      intake: "February 2023",
-      subjects: ["MATH301", "PHYS301", "ENG301"],
-    },
-    {
-      name: "Physics 2024",
-      program: "Bachelor of Physics",
-      students: 38,
-      campus: "Sydney Campus",
-      intake: "July 2024",
-      subjects: ["PHYS202", "MATH202", "CHEM201"],
-    },
-    {
-      name: "Computer Science 2023",
-      program: "Bachelor of Computer Science",
-      students: 25,
-      campus: "Melbourne Campus",
-      intake: "February 2023",
-      subjects: ["CS401", "MATH401", "ENG401"],
-    },
-  ];
+
+  // Cohort identity and student count come from the shared COHORTS entity —
+  // the same source class enrollment is derived from. Campus/intake are
+  // display-only details until cohorts gain a home campus in the data model.
+  const COHORT_DETAILS: Record<string, { campus: string; intake: string; subjects: string[] }> = {
+    "2025-S1-BIO": { campus: "Sydney Campus", intake: "February 2025", subjects: ["BIO101", "CHEM202"] },
+    "2025-S2-BIO": { campus: "Sydney Campus", intake: "July 2025", subjects: ["BIO101", "PHYS202"] },
+    "2024-S2-CS": { campus: "Melbourne Campus", intake: "July 2024", subjects: ["CS101", "MATH301"] },
+    "INTL-A": { campus: "Sydney Campus", intake: "February 2025", subjects: ["CS101", "ENG201"] },
+    "INTL-B": { campus: "Brisbane Campus", intake: "February 2025", subjects: ["ENG201"] },
+  };
+
+  const cohorts = COHORTS.map((c) => ({
+    name: `${getCourseCode(c.courseId)} ${c.label}`,
+    program: COURSES.find((course) => course.id === c.courseId)?.title ?? c.courseId,
+    students: c.size,
+    campus: COHORT_DETAILS[c.id]?.campus ?? "—",
+    intake: COHORT_DETAILS[c.id]?.intake ?? "—",
+    subjects: COHORT_DETAILS[c.id]?.subjects ?? [],
+  }));
 
   const unique = (key: "program" | "campus" | "intake") =>
     Array.from(new Set(cohorts.map((c) => c[key])));
