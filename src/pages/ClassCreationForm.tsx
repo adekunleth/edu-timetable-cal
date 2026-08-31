@@ -17,7 +17,7 @@ import { useClasses } from "@/contexts/ClassesContext";
 import { ClassSchedule, ClassSession, DeliveryType, DeliveryMethod } from "@/types/classForm";
 import { ChevronLeft, Save, Upload, Plus, Trash2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { SUBJECTS, INSTRUCTORS, STUDY_PERIODS, COHORTS, COURSES, getCohortsForCourse } from "@/constants/dropdownOptions";
+import { SUBJECTS, INSTRUCTORS, STUDY_PERIODS, COHORTS, COURSES, getCohortsForCourse, getSubjectsForCourse } from "@/constants/dropdownOptions";
 import {
   CAMPUSES_MASTER,
   getRoomsForVenue,
