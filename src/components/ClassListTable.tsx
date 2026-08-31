@@ -23,6 +23,7 @@ import { AttendanceMarkingDialog } from "./AttendanceMarkingDialog";
 import { FiltersEmptyState } from "./ClassFilterBar";
 import { ClassSchedule } from "@/types/classForm";
 import { getCohortLabel, getCourseCode, getSubjectCredits } from "@/constants/dropdownOptions";
+import { getClassCapacity, getClassEnrollment } from "@/utils/enrollment";
 
 const weekDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
@@ -56,6 +57,28 @@ function CohortCell({ cohortIds }: { cohortIds: string[] }) {
         </Tooltip>
       )}
     </div>
+  );
+}
+
+/** Enrolled / capacity, derived from cohort sizes and room capacity. */
+function EnrollmentCell({ cls }: { cls: ClassSchedule }) {
+  const enrolled = getClassEnrollment(cls);
+  const capacity = getClassCapacity(cls);
+  if (enrolled === 0) return <span className="text-muted-foreground">—</span>;
+  const over = capacity != null && enrolled > capacity;
+  return (
+    <span className={`text-sm font-medium ${over ? "text-destructive" : ""}`}>
+      {enrolled}
+      {capacity != null && ` / ${capacity}`}
+      {over && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="ml-1 cursor-help text-destructive">⚠</span>
+          </TooltipTrigger>
+          <TooltipContent>Enrollment exceeds room capacity</TooltipContent>
+        </Tooltip>
+      )}
+    </span>
   );
 }
 
@@ -105,6 +128,7 @@ export function ClassListTable() {
                 <TableHead>Course</TableHead>
                 <TableHead>Credits</TableHead>
                 <TableHead>Cohort/Intake</TableHead>
+                <TableHead>Enrollment</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Schedule</TableHead>
                 <TableHead>Instructor</TableHead>
@@ -130,6 +154,9 @@ export function ClassListTable() {
                     </TableCell>
                     <TableCell>
                       <CohortCell cohortIds={cls.cohortIds} />
+                    </TableCell>
+                    <TableCell>
+                      <EnrollmentCell cls={cls} />
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={typeColorMap[session.deliveryType]}>

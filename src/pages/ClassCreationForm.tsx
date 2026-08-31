@@ -25,6 +25,7 @@ import {
   resolveLocation,
 } from "@/constants/locations";
 import { CohortMultiSelect } from "@/components/CohortMultiSelect";
+import { getCohortSize } from "@/utils/enrollment";
 import { generateWeeksForPeriod, calculateNumberOfWeeks } from "@/utils/weekGenerator";
 
 const typeColorMap: Record<DeliveryType, string> = {
@@ -134,6 +135,12 @@ export default function ClassCreationForm() {
   const totalContactHours = useMemo(() => {
     return contactHours * numberOfWeeks;
   }, [contactHours, numberOfWeeks]);
+
+  // Enrollment is derived from cohort sizes — never typed in manually.
+  const estimatedEnrollment = useMemo(
+    () => cohortIds.reduce((sum, id) => sum + getCohortSize(id), 0),
+    [cohortIds]
+  );
 
   // Room conflict detection
   const detectRoomConflict = (sessionToCheck: ClassSession) => {
@@ -388,6 +395,22 @@ export default function ClassCreationForm() {
               value={cohortIds}
               onChange={setCohortIds}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Estimated Enrollment</Label>
+            <Input
+              readOnly
+              value={
+                cohortIds.length === 0
+                  ? "— (no cohorts assigned)"
+                  : `${estimatedEnrollment} students`
+              }
+              className="bg-muted"
+            />
+            <p className="text-xs text-muted-foreground">
+              Derived from the sizes of the assigned cohorts.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -704,6 +727,19 @@ export default function ClassCreationForm() {
                               <span>Room conflict: this room is already booked for this time</span>
                             </div>
                           )}
+                          {session.roomId &&
+                            estimatedEnrollment > 0 &&
+                            (resolveLocation(session.roomId)?.capacity ?? Infinity) <
+                              estimatedEnrollment && (
+                              <div className="flex items-center gap-2 text-sm text-amber-600">
+                                <AlertCircle className="h-4 w-4" />
+                                <span>
+                                  Capacity warning: estimated enrollment ({estimatedEnrollment})
+                                  exceeds this room's capacity (
+                                  {resolveLocation(session.roomId)?.capacity})
+                                </span>
+                              </div>
+                            )}
                         </div>
                       </div>
                     </div>
