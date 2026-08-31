@@ -466,3 +466,43 @@ This removes the stale, duplicated "students" number that previously lived only 
 - No per-student enrollment records — a real SIS derives class lists from individual enrollments; the prototype stops at cohort-level aggregates.
 - No manual enrollment override, waitlists, or capacity enforcement at publish time.
 - Cohort sizes are static seed data; there is no UI to edit a cohort's size yet.
+
+---
+
+## 16. Attendance Marking Window
+
+Attendance can no longer be recorded at any arbitrary time. Every session occurrence has a **marking window** that opens when the class starts and closes a configurable number of hours after it ends.
+
+### 16.1 Rule
+
+For a session occurrence with start `S` and end `E` (local browser time), and a configured window of `W` hours (default **48**):
+
+| Condition | Status | Marking allowed? |
+|-----------|--------|------------------|
+| `now < S` | `upcoming` | No — "Marking opens when the class starts" |
+| `S ≤ now ≤ E + W` | `open` | Yes — countdown shown ("closes in 36h") |
+| `now > E + W` | `closed` | No — session locked ("Window closed") |
+
+Boundary conditions: exactly at `S` the window is open; exactly at `E + W` it is closed (comparison is `now > closesAt`).
+
+### 16.2 Implementation
+
+- `src/utils/attendanceWindow.ts` — `getWindowStatus(start, end, windowHours, now?)` returns `{ status, opensAt, closesAt, hoursRemaining }`. Helpers: `getWeekStart()` (Monday of current week), `parseTimeToDate()` (accepts `"09:00"` and `"9:00 AM"`), `formatHoursRemaining()` (`"36h"` / `"1d 12h"`).
+- `src/contexts/AttendanceSettingsContext.tsx` — holds `windowHours` (default 48), editable from **Settings → Attendance Configuration → Attendance Marking Window**. Changing it re-evaluates every button/dialog immediately.
+
+### 16.3 Concrete occurrences from recurring sessions
+
+Sessions are stored as recurring patterns (`day` 0–4 + `startTime`/`endTime`). The calendar renders the **current week** (computed from today's date, replacing the previous hardcoded demo week), so each session maps to a concrete occurrence datetime `weekStart + day`, and the window status is computed per occurrence. Dashboard "Today's Schedule" items resolve their time range against today's date the same way.
+
+### 16.4 UI enforcement
+
+- **Calendar grid**: staff see a hover "Mark" button only while the window is open (tooltip shows remaining time). Upcoming sessions show "Not open"; closed sessions show "Closed" with a lock icon — both non-interactive.
+- **Dashboard**: same three states on the "Mark Attendance" button, plus a "Closes in Xh" caption while open.
+- **Marking dialog**: a status banner (green open / amber upcoming / red closed) and a defensive guard — Save is disabled and a destructive toast is shown if a save is attempted outside the window.
+- **Students** never see marking controls (unchanged role gating).
+
+### 16.5 Deliberate exclusions
+
+- No admin override or late-edit flag — a closed window is final in the prototype.
+- The window is a single global setting; there is no per-class or per-cohort override.
+- Window state is evaluated at render time (no live ticking countdown).
