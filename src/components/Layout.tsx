@@ -27,7 +27,7 @@ interface LayoutProps {
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard, roles: ["admin", "teacher", "student"] },
   { name: "Calendar", href: "/calendar", icon: Calendar, roles: ["admin", "teacher", "student"] },
-  { name: "Subjects", href: "/subjects", icon: BookOpen, roles: ["admin", "teacher"] },
+  
   { name: "My Attendance", href: "/attendance", icon: ClipboardList, roles: ["student"] },
   { name: "Attendance", href: "/attendance", icon: ClipboardList, roles: ["admin", "teacher"] },
   { name: "Cohorts", href: "/cohorts", icon: Users, roles: ["admin", "teacher"] },

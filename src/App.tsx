@@ -10,7 +10,7 @@ import { RoleProvider } from "@/contexts/RoleContext";
 import Dashboard from "./pages/Dashboard";
 import CalendarView from "./pages/CalendarView";
 import ClassCreationForm from "./pages/ClassCreationForm";
-import Subjects from "./pages/Subjects";
+
 import Attendance from "./pages/Attendance";
 import Cohorts from "./pages/Cohorts";
 import Reports from "./pages/Reports";
@@ -33,7 +33,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/calendar" element={<CalendarView />} />
               <Route path="/calendar/add-class" element={<ClassCreationForm />} />
-              <Route path="/subjects" element={<Subjects />} />
+              
               <Route path="/attendance" element={<Attendance />} />
               <Route path="/cohorts" element={<Cohorts />} />
               <Route path="/reports" element={<Reports />} />

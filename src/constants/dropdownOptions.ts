@@ -6,16 +6,21 @@ export interface CatalogSubject {
   label: string;
   /** Programmes/courses this subject belongs to (CR-002). */
   courseIds: string[];
+  /** Credit points for the subject (external catalogue data). */
+  credits: number;
 }
 
 export const SUBJECTS: CatalogSubject[] = [
-  { code: "BIO101", title: "Anatomy Basics", label: "BIO101 - Anatomy Basics", courseIds: ["BSC-BIO"] },
-  { code: "MATH301", title: "Advanced Calculus", label: "MATH301 - Advanced Calculus", courseIds: ["BENG-MEC", "BIT-CS"] },
-  { code: "PHYS202", title: "Quantum Physics", label: "PHYS202 - Quantum Physics", courseIds: ["BSC-BIO", "BENG-MEC"] },
-  { code: "CHEM202", title: "Organic Chemistry", label: "CHEM202 - Organic Chemistry", courseIds: ["BSC-BIO"] },
-  { code: "CS101", title: "Introduction to Programming", label: "CS101 - Introduction to Programming", courseIds: ["BIT-CS"] },
-  { code: "ENG201", title: "Technical Writing", label: "ENG201 - Technical Writing", courseIds: ["BIT-CS", "BBUS", "BENG-MEC"] },
+  { code: "BIO101", title: "Anatomy Basics", label: "BIO101 - Anatomy Basics", courseIds: ["BSC-BIO"], credits: 6 },
+  { code: "MATH301", title: "Advanced Calculus", label: "MATH301 - Advanced Calculus", courseIds: ["BENG-MEC", "BIT-CS"], credits: 6 },
+  { code: "PHYS202", title: "Quantum Physics", label: "PHYS202 - Quantum Physics", courseIds: ["BSC-BIO", "BENG-MEC"], credits: 12 },
+  { code: "CHEM202", title: "Organic Chemistry", label: "CHEM202 - Organic Chemistry", courseIds: ["BSC-BIO"], credits: 6 },
+  { code: "CS101", title: "Introduction to Programming", label: "CS101 - Introduction to Programming", courseIds: ["BIT-CS"], credits: 6 },
+  { code: "ENG201", title: "Technical Writing", label: "ENG201 - Technical Writing", courseIds: ["BIT-CS", "BBUS", "BENG-MEC"], credits: 3 },
 ];
+
+export const getSubjectCredits = (code: string): number | undefined =>
+  SUBJECTS.find((s) => s.code === code)?.credits;
 
 export const getSubjectsForCourse = (courseId?: string): CatalogSubject[] =>
   courseId && courseId !== "all"
