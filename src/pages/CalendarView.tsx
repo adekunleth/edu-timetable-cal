@@ -219,7 +219,7 @@ export default function CalendarView() {
                           .map((cls, idx) => (
                             <div
                               key={idx}
-                              className={`absolute inset-x-2 rounded-lg border-l-4 p-2 ${cls.color} group cursor-pointer hover:shadow-md transition-shadow`}
+                              className={`absolute inset-x-2 z-10 rounded-lg border-l-4 p-2 ${cls.color} group cursor-pointer hover:z-20 hover:shadow-md transition-shadow`}
                               style={{
                                 height: `${cls.duration * 80 - 8}px`,
                               }}

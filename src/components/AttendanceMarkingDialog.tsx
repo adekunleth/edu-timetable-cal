@@ -138,7 +138,7 @@ export function AttendanceMarkingDialog({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Mark Attendance</DialogTitle>
-          <DialogDescription>
+          <DialogDescription asChild>
             <div className="mt-2 space-y-1 text-sm">
               <div><strong>Subject:</strong> {classInfo.subject} - {classInfo.title}</div>
               <div><strong>Date & Time:</strong> {classInfo.date} at {classInfo.time}</div>
