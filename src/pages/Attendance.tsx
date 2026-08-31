@@ -85,6 +85,8 @@ const attendanceRecords = baseRecords.map((r, i) => ({
   cohortId: COHORT_CYCLE[i % COHORT_CYCLE.length],
 }));
 
+import { getCohortSize } from "@/utils/enrollment";
+
 const SUBJECT_COLUMNS = [
   { code: "BIO101", key: "bio101" as const },
   { code: "MATH301", key: "math301" as const },
@@ -155,6 +157,13 @@ export default function Attendance() {
       (filters.cohortId === "unassigned" ? false : r.cohortId === filters.cohortId);
     return matchesCourse && matchesCohort;
   });
+
+  // Enrollment in the current filter scope: distinct cohorts appearing in the
+  // scoped records, summed by cohort size (single source of truth).
+  const scopedEnrollment = Array.from(new Set(scopedRecords.map((r) => r.cohortId))).reduce(
+    (sum, id) => sum + getCohortSize(id),
+    0
+  );
 
   const hasLate = (r: (typeof periodRecords)[number]) =>
     SUBJECT_COLUMNS.some((c) => (r as Record<string, string>)[c.key] === "late");
